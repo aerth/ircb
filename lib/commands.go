@@ -30,7 +30,7 @@ func init() {
 func dofortune(c *Connection, irc IRC) {
 	cmd := exec.Command("fortune", "-s")
 	b, _ := cmd.Output()
-	go c.SlowSend(irc.Channel, string(b))
+	c.SlowSend(irc.Channel, string(b))
 }
 
 func (c *Connection) SlowSend(channel string, message string) {
@@ -201,7 +201,7 @@ func registerCommands() map[string]func(c *Connection, irc IRC) {
 		commands["hello"] = CommandSayf("Hello, %s", "channel")
 
 		// -=up
-		commands["up"] = CommandSayf("Uptime: %s", time.Since(boottime).String())
+		commands["up"] = douptime
 
 		// -=ping
 		commands["ping"] = CommandSay("pong")
@@ -222,4 +222,8 @@ func registerCommands() map[string]func(c *Connection, irc IRC) {
 
 func ListCommands(c *Connection, irc IRC){
 	c.Write(irc.Channel, c.Config.ListCommands())
+}
+
+func douptime(c *Connection, irc IRC){
+	c.Write(irc.Channel, "Uptime: "+time.Now().Sub(boottime).String())
 }
