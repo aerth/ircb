@@ -33,30 +33,6 @@ type Connection struct {
 	conn                net.Conn
 }
 
-// Display HUD
-func (config *Config) Display() {
-	// print if Verbose
-	if config.Verbose {
-		green.Fprintln(os.Stderr, config)
-	}
-
-	if !config.NoTLS {
-		fmt.Fprintln(os.Stderr, clrgood, "Using TLS")
-	}
-	if config.Password != "" {
-		if config.UseServices {
-			green.Fprintln(os.Stderr, clralert, "Using NickServ (no SASL)")
-		} else {
-			green.Fprintln(os.Stderr, clrgood, "Using SASL")
-		}
-	}
-
-	if config.Socks != "" {
-		fmt.Fprintln(os.Stderr, clrgood, "Using SOCKS")
-	}
-
-}
-
 // Connect returns a connection
 func (config *Config) Connect() *Connection {
 	for key, v := range map[string]string{
@@ -84,6 +60,11 @@ func (config *Config) Connect() *Connection {
 		}
 	}
 
+	config.owners = map[string]int{}
+	config.owners[config.Master] = 1
+	for _, v := range strings.Split(config.Owners,",") {
+		config.owners[v] = 2
+	}
 	c := new(Connection)
 	c.Writer = make(chan string)
 	c.Reader = make(chan string)
@@ -104,7 +85,7 @@ func (config *Config) Connect() *Connection {
 
 	// tls handshake
 	if !config.NoTLS {
-		c.HandshakeTLS()
+		c.tlsHandshake()
 	}
 
 	// do once
@@ -130,7 +111,7 @@ func (config *Config) configTLS() *tls.Config {
 }
 
 // Start TLS handshake, swap c.conn for TLS connection
-func (c *Connection) HandshakeTLS() {
+func (c *Connection) tlsHandshake() {
 	if c.Config.Verbose {
 		c.Log("TLS Handshake")
 	}
@@ -197,39 +178,57 @@ func (c *Connection) Reconnect() {
 	c = c.Config.Connect()
 }
 
-// Stop() will quit Stop("reconnect") will attempt to reconnect
+// Stop will quit clean, Stop("reconnect") will attempt to reconnect
 func (c *Connection) Stop(args ...interface{}) {
+	quitmsg := ""
 	if c.Config.Verbose {
 		fmt.Println("Attempting [STOP]")
 	}
-	c.Writer <- "QUIT :bye"
-	c.Reader <- STOP
-	if c.conn != nil {
+
+	for _, arg := range args {
+		switch arg.(type) {
+		case error:
+			fmt.Println(red.Sprint(arg))
+			quitmsg = "got error"
+		case string:
+			fmt.Println(green.Sprint(arg))
+			if arg == "reconnect" {
+				quitmsg = "reconnecting"
+			} else {
+				quitmsg = arg.(string)
+			}
+		default:
+			quitmsg = "ircb client: https://github.com/aerth/ircb"
+		}
+	}
+
+	if c != nil && quitmsg != "reconnecting" {
+		doreport(c.Netlog)
+		if quitmsg != "" {
+			go func() { c.Writer <- "QUIT :"+quitmsg }()
+		}
+		<-time.After(500*time.Millisecond)
+		go func() { c.Writer <- STOP }()
+		<-time.After(500*time.Millisecond)
+		go func() { c.Reader <- STOP }()
+		<-time.After(500*time.Millisecond)
+	}
+
+	if c != nil && c.conn != nil {
 		err := c.conn.Close()
 		if err != nil {
 			fmt.Fprintln(os.Stderr, red.Sprint(err))
 		}
 	}
 
-	doreport(c.Netlog)
 	fmt.Fprintln(os.Stderr, "ircb: gone", time.Now().String())
-	if args == nil {
-		os.Exit(0)
-	}
-	for _, arg := range args {
-		switch arg.(type) {
-		case error:
-			c.Log(red.Sprint(arg))
-		case string:
-			c.Log(green.Sprint(arg))
-		default:
-		}
-	}
-
 	c = nil
-	c.conn = nil
-	c.Config.Display()
-	os.Exit(0)
+	if quitmsg != "reconnecting" {
+	go func(){
+		<- time.After(3*time.Second)
+		os.Exit(0)
+	}()
+}
 }
 
 // initializeConnection
@@ -293,7 +292,7 @@ func (c *Connection) initializeConnection() {
 			}
 		case "NICK":
 			if strings.Contains(irc.Message, c.Config.Master) {
-				c.Write(c.Config.Master, c.Config.CommandPrefix)
+				c.WriteMaster(c.Config.CommandPrefix)
 			}
 		case "MODE": // got first MODE change. join channels and start ircb
 			go c.ircb()
@@ -346,8 +345,16 @@ func (c *Connection) WaitFor(grep []string, timelimit time.Duration) int {
 
 }
 
-
 // Write a PRIVMSG to user or channel
 func (c *Connection) Write(channel, message string) {
-	go func(){ c.Writer <- fmt.Sprintf(`PRIVMSG %s :%s`, channel, message) }()
+	if !strings.Contains(message, "\n") {
+		c.Writer <- fmt.Sprintf(`PRIVMSG %s :%s`, channel, message)
+	} else {
+			c.SlowSend(channel, message)
+	}
+}
+
+// WriteMaster a PRIVMSG to c.Config.Master
+func (c *Connection) WriteMaster(message string) {
+	go func() { c.Write(c.Config.Master, message) }()
 }

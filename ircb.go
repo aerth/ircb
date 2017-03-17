@@ -34,7 +34,7 @@ var (
 	 *
 	 *
 	 */
-	 version string
+	version     string
 	unsafe      = flag.Bool("unsafe", false, "trust invalid TLS certificates")
 	verbose     = flag.Bool("v", false, "verbose output")
 	notls       = flag.Bool("notls", false, "no SSL/TLS")
@@ -122,7 +122,7 @@ func DoConfig() *ircb.Config {
 	config.Port = *botport
 	config.Socks = *socks
 	config.InvalidTLS = *unsafe
-	config.Version = green.Sprint(version,built)
+	config.Version = green.Sprint(version, built)
 	config.Version = version
 	config.NoTLS = *notls
 	config.Verbose = *verbose
@@ -168,8 +168,8 @@ func DoConfig() *ircb.Config {
 			config.InvalidTLS, _ = strconv.ParseBool(a.Value.String())
 		case "v":
 			config.Verbose, _ = strconv.ParseBool(a.Value.String())
-//		case "nosec":
-//			config.NoSecurity, _ = strconv.ParseBool(a.Value.String())
+			//		case "nosec":
+			//			config.NoSecurity, _ = strconv.ParseBool(a.Value.String())
 		}
 		fmt.Fprintln(os.Stderr, alert, "config override: ", a.Name, "=", a.Value)
 

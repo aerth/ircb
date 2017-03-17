@@ -124,7 +124,34 @@ func randomcolor() *color.Color {
 	return clr
 }
 
+func rnbo(s string) string {
+	runes := []rune(s)
+	var out string
+	for _, v := range runes {
+		ran := randomcolor().Sprint(string(v))
+		out += ran
+	}
+	return out
+}
+
 // String config
 func (c *Config) String() string {
 	return fmt.Sprintf("%# v\n", pretty.Formatter(c))
+}
+
+// String config
+func (config *Config) ListCommands() string {
+	var commands string
+	commands += fmt.Sprintf("Total: %v\n", len(config.Commands))
+	for key := range config.Commands {
+		commands += fmt.Sprintf("Command: %s\n", key)
+	}
+	return commands
+}
+
+func randint() int {
+	return rand.Intn(9)
+}
+func randstr() string {
+	return strconv.Itoa(randint())
 }

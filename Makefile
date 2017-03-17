@@ -13,6 +13,8 @@ RELEASE ?= ${VERSION}${COMMIT}
 
 all:	${NAME}
 
+fast:
+	CGO_ENABLED=1 go build -o ${NAME} -x --ldflags "-s -extldflags='-static' -X main.version=${RELEASE}" .
 
 build:
 	@echo 'Building ${NAME} version ${RELEASE}'

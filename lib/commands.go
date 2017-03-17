@@ -15,51 +15,39 @@ import (
  *
  */
 
-// Commands map
-var Commands = map[string]func(c *Connection, irc IRC){}
+// c.Config.Commands map
+//var c.Config.Commands = map[string]func(c *Connection, irc IRC){}
 
 // Verbs can be map
-var Verbs = map[string]func(c *Connection, read string){}
+//var Verbs = map[string]func(c *Connection, read string){}
 
 var boottime = time.Now()
 
 func init() {
-
-	// -=about
-	Commands["about"] = func(c *Connection, irc IRC) {
-		c.Write(irc.Channel, "ircb v2 (https://github.com/aerth/ircb)")
-	}
-
-	// -=hello
-	Commands["hello"] = func(c *Connection, irc IRC) {
-		c.Write(irc.Channel, "hello "+irc.Channel)
-	}
-	// -=up
-	Commands["up"] = func(c *Connection, irc IRC) {
-		c.Write(irc.Channel, "uptime: "+time.Since(boottime).String())
-	}
-
-	// -=ping
-	Commands["ping"] = CommandSay("pong")
-
-	// -=fortune
-	Commands["fortune"] = dofortune
 
 }
 
 func dofortune(c *Connection, irc IRC) {
 	cmd := exec.Command("fortune", "-s")
 	b, _ := cmd.Output()
-	split := strings.Split(string(b), "\n")
+	go c.SlowSend(irc.Channel, string(b))
+}
+
+func (c *Connection) SlowSend(channel string, message string) {
+	split := strings.Split(message, "\n")
 	for i, line := range split {
 		line = strings.TrimSpace(line)
 		if line == "" && i == len(split)-1 {
 			return
 		}
-		if line == "" {
-			line = " "
+		if clean(line) == "" {
+			continue
 		}
-		c.Write(irc.Channel, randomcolor().Sprint(line))
+		if !strings.HasPrefix(channel, "#") {
+			c.Write(channel, randomcolor().Sprint(line))
+		} else {
+			c.Write(channel, line)
+		}
 		<-time.After(1000 * time.Millisecond)
 	}
 }
@@ -68,6 +56,34 @@ func dofortune(c *Connection, irc IRC) {
 func CommandSay(s string) func(c *Connection, irc IRC) {
 	return func(c *Connection, irc IRC) {
 		c.Write(irc.Channel, s)
+	}
+}
+// CommandSayf returns command function that says s
+func CommandSayf(s string, si ...string) func(c *Connection, irc IRC) {
+	return func(c *Connection, irc IRC) {
+		var i []interface{}
+		for _, v := range si {
+			switch v {
+			case "from":
+				i = append(i, irc.From)
+			case "channel":
+				i = append(i, irc.Channel)
+			case "command":
+				i = append(i, irc.Command)
+			case "args":
+				i = append(i, irc.CommandArguments)
+			default:
+				i = append(i, v)
+			}
+		}
+		c.Write(irc.Channel, fmt.Sprintf(s, i...))
+	}
+}
+
+// CommandSay returns command function that says s
+func CommandSlowSay(s string) func(c *Connection, irc IRC) {
+	return func(c *Connection, irc IRC) {
+		c.SlowSend(irc.Channel, s)
 	}
 }
 
@@ -79,16 +95,18 @@ func CommandDo(s string) func(c *Connection, irc IRC) {
 }
 
 // HandleVerbINT handles only INT verbs suchs as 443 (nick in use)
-func (c *Connection) HandleVerbINT(verb int, irc IRC) {
+func (c *Connection) HandleVerbINT(verb int, irc IRC) (handled bool) {
 	// if c.Config.Verbose {
 	// 	t1 := time.Now()
 	// 	defer func() { c.Logf("int handle took %s", time.Now().Sub(t1)) }()
 	// }
+
 	switch verb {
 	default:
 		if c.Config.Verbose {
 			c.Log("** Got new INT verb:", verb)
 		}
+		return false
 	case 1, 2, 3, 4, 5, 6, 7, 8, 9,
 		250, 251, 252, 253, 254, 255, 256, 257, 258, 259, 260,
 		261, 262, 263, 264, 265, 266, 267, 268, 269:
@@ -109,61 +127,99 @@ func (c *Connection) HandleVerbINT(verb int, irc IRC) {
 		return
 	case 401: // no such nick/channel
 	case 474: // banned
-		c.Write(c.Config.Master, irc.Message)
+		c.WriteMaster(irc.Message)
 	case 433: // nick in use
 		go func() {
 			c.connected = false
 			c.Config.Password = "" // chances are...
-			alert("Nick in use. Adding _ and removing password.")
-			c.Config.Name = c.Config.Name + "_"
+			alert("Nick in use. Adding int and removing password.")
+			c.Config.Name = c.Config.Name + randstr()
 			<-time.After(1 * time.Second)
 			c.Reconnect()
 		}()
+
 	}
+	handled = true
+	return handled
 }
 
-
-func (c *Connection) HandlePRIVMSG(irc IRC) {
-	t1 := time.Now()
+func (c *Connection) HandlePRIVMSG(irc IRC) bool {
+	var handled = false
+	var t1 = time.Now()
 	defer fmt.Printf("PRIVMSG handle took %q\n", time.Now().Sub(t1))
 
 	if irc.Channel == c.Config.Name {
 		irc.Channel = irc.From
 	}
-	if irc.Command == "" {
-		fmt.Println("Not a command:", irc.Message)
-		if strings.Contains(irc.Message, c.Config.Name){
-			c.Write(c.Config.Master, irc.Message)
-			return
-		}
-		fmt.Println("not good")
-		return
-	}
+
 	// cmd := strings.Split(irc.Message, " ")[0]
 	// cmd = strings.TrimSpace(cmd)
 	cmd := irc.Command
-	if Commands[cmd] != nil {
+	if cmd == "" {
+		c.Log(red.Sprint("blank command\n"))
+		return handled
+	}
+	if c.Config.Commands[cmd] != nil {
 		c.Log(orange.Sprint("Command map command"))
-		Commands[cmd](c, irc)
-		return
+		c.Config.Commands[cmd](c, irc)
+		return handled
 	}
 
 	c.Log(blue.Sprintf("switch cmd: %q ", cmd))
 	switch cmd { // first word
-
-	// case "v":
-	// 	c.Write(irc.Channel, "ircb "+c.Config.Version)
-	case "h":
-		c.Write(irc.From, "q r u v h beer about")
-	case "beer":
-		c.Write(irc.Channel, fmt.Sprintf("Have a beer, %s!", irc.From))
-		//	case "about":
-		//		c.Write(irc.Channel, fmt.Sprintf("%s: ircb v%s source code at https://github.com/aerth/ircb", irc.From, c.Config.Version))
-
+		case "h", "help", "commands", "list":
+			if c.Config.Commands["help"] != nil {
+			c.Config.Commands["help"](c, irc)
+		}
+			return handled
+		case "about":
+			c.Write(irc.Channel, fmt.Sprintf("%s: ircb v%s source code at https://github.com/aerth/ircb", irc.From, c.Config.Version))
+			return handled
 	default:
 		// started with command prefix, but not found in Command map or above cases.
-		if irc.From == c.Config.Master {
+		if strings.Contains(irc.From, c.Config.Master) && getuser(irc.From) == c.Config.Master {
 			c.HandleMasterCommand(irc)
+			return handled
 		}
 	}
+	return false
+}
+
+// return username extracted from between : and !
+func getuser(s string) string {
+	return strings.TrimPrefix(strings.Split(s, "!")[0], ":")
+}
+
+func registerCommands() map[string]func(c *Connection, irc IRC) {
+	var commands = map[string]func(c *Connection, irc IRC){}
+
+		// -=about
+		commands["about"] = func(c *Connection, irc IRC) {
+			c.Write(irc.Channel, "ircb v2 (https://github.com/aerth/ircb)")
+		}
+		// -=hello
+		commands["hello"] = CommandSayf("Hello, %s", "channel")
+
+		// -=up
+		commands["up"] = CommandSayf("Uptime: %s", time.Since(boottime).String())
+
+		// -=ping
+		commands["ping"] = CommandSay("pong")
+
+		// -=help
+		commands["help"] = ListCommands
+
+		// ircb logo
+		commands["ircb"] = CommandSlowSay(logo)
+
+		// beer me
+		commands["beer"] = CommandSayf("Have a beer, %s", "from")
+
+		// -=fortune
+		commands["fortune"] = dofortune
+		return commands
+}
+
+func ListCommands(c *Connection, irc IRC){
+	c.Write(irc.Channel, c.Config.ListCommands())
 }

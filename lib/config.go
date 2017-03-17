@@ -24,7 +24,8 @@ type Config struct {
 	Dialer         proxy.Dialer `json:"-"`
 
 	Master                            string // irc user
-	Owners []string
+	Owners                            string // comma separated
+	owners														map[string]int
 	Hostname                          string
 	Port                              int
 	Name, AuthName, Account, Password string
@@ -37,10 +38,19 @@ type Config struct {
 	UseServices, NoTLS, InvalidTLS, Verbose, NoSecurity bool
 
 	CommandPrefix string
+
+	Commands map[string]func(c *Connection, irc IRC) `json:"-"`
+
 }
 
 // Save config to ('.config') by default
 func (c *Config) Save() error {
+
+	for key := range c.owners {
+		c.Owners += key+","
+	}
+	c.Owners = strings.TrimSuffix(c.Owners, ",")
+
 
 	// Create new config, writing over existing.
 	configFile, err := os.OpenFile(c.ConfigLocation, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0640)
@@ -129,4 +139,41 @@ func (c *Config) Reload() error {
 	}
 	c.Dialer = dialer
 	return nil
+}
+
+var logo = `██╗██████╗  ██████╗██████╗
+██║██╔══██╗██╔════╝██╔══██╗
+██║██████╔╝██║     ██████╔╝
+██║██╔══██╗██║     ██╔══██╗
+██║██║  ██║╚██████╗██████╔╝
+╚═╝╚═╝  ╚═╝ ╚═════╝╚═════╝`
+
+// Display HUD
+func (config *Config) Display() {
+
+	fmt.Fprintln(os.Stderr, rnbo(logo))
+	<-time.After(time.Second)
+	// print if Verbose
+	if config.Verbose {
+		green.Fprintln(os.Stderr, config.String())
+
+		<-time.After(time.Second)
+		orange.Fprintln(os.Stderr, config.ListCommands())
+	}
+
+	if !config.NoTLS {
+		fmt.Fprintln(os.Stderr, clrgood, "Using TLS")
+	}
+	if config.Password != "" {
+		if config.UseServices {
+			green.Fprintln(os.Stderr, clralert, "Using NickServ (no SASL)")
+		} else {
+			green.Fprintln(os.Stderr, clrgood, "Using SASL")
+		}
+	}
+
+	if config.Socks != "" {
+		fmt.Fprintln(os.Stderr, clrgood, "Using SOCKS")
+	}
+
 }

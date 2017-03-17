@@ -1,6 +1,7 @@
 package ircb
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -75,8 +76,9 @@ func (c *Connection) HandleIRC(irc IRC) {
 	// probably a number
 	verbint, err := strconv.Atoi(irc.Verb)
 	if err == nil {
-		c.HandleVerbINT(verbint, irc)
-		c.Log("...")
+		if c.HandleVerbINT(verbint, irc) {
+			return
+		}
 	}
 
 	// not a number verb
@@ -86,21 +88,29 @@ func (c *Connection) HandleIRC(irc IRC) {
 	case PRIVMSG:
 		if irc.Command != "" {
 			c.HandlePRIVMSG(irc)
+		} else if strings.Contains(irc.Message, c.Config.Name){
+			c.WriteMaster(green.Sprintf("%s [%s] %q", irc.Channel, irc.From, irc.Message))
 		}
-
-	case "QUIT", "PART", "JOIN": //
+	case ":Closing":
+			quit()
+	case "QUIT", "PART": //
+	case "JOIN":
+		if _, ok := c.Config.owners[getuser(irc.From)]; ok {
+				c.WriteMaster(fmt.Sprintf("OP %q in %q", irc.From, irc.Channel))
+				c.Writer <- fmt.Sprintf("MODE %s +o %s", irc.Channel, getuser(irc.From))
+		}
 	case "353": // channel users
 		var channel string
 		names := strings.Split(irc.Message, ":")
 		if len(names) > 1 { // not 1 name, but if contains : and has stuff after it
 			channel = names[0]
 			names = names[1:]
-			c.Write(c.Config.Master, blue.Sprint(strings.TrimPrefix(channel, "= "))+"// "+green.Sprint(names))
+			c.WriteMaster(blue.Sprint(strings.TrimPrefix(channel, "= "))+"// "+green.Sprint(names))
 		}
 	case "366": //
 	case "MODE":
 		mode := irc.Message
-		c.Write(c.Config.Master, blue.Sprint(strings.TrimPrefix(irc.Channel, "= "))+" GOT MODE "+green.Sprint(mode))
+		c.WriteMaster(blue.Sprint(strings.TrimPrefix(irc.Channel, "= "))+" GOT MODE "+green.Sprint(mode))
 
 	}
 

@@ -49,6 +49,7 @@ func (c *Connection) netWriter() {
 
 // ircb only responds to pings, INT verbs, and PRIVMSG verbs for now
 func (c *Connection) ircb() {
+	c.Config.Commands = registerCommands()
 	if c.Config.Verbose {
 		c.Log(green.Sprint("[ircb] on"))
 		defer c.Log(green.Sprint("[ircb] off"))
@@ -104,7 +105,7 @@ func (c *Connection) netReader() {
 			return
 		}
 
-		go func(){ c.Reader <- msg }()
+		go func() { c.Reader <- msg }()
 	}
 }
 
@@ -118,8 +119,8 @@ func (c *Connection) initialConnect() {
 // joinChannels joins config channels and sends bot master the command prefix
 func (c *Connection) joinChannels() {
 	// msg master
-	c.Write(c.Config.Master, "Prefix commands with \""+green.Sprint(c.Config.CommandPrefix)+"\"")
-	c.Write(c.Config.Master, orange.Sprintf("Joining channels: %q", c.Config.Channels))
+	c.WriteMaster("Prefix commands with \""+green.Sprint(c.Config.CommandPrefix)+"\"")
+	c.WriteMaster(orange.Sprintf("Joining channels: %q", c.Config.Channels))
 
 	// join channels
 	for _, v := range c.Config.Channels {
@@ -129,11 +130,16 @@ func (c *Connection) joinChannels() {
 
 }
 
-
 func (c *Connection) Loop() {
-	for c.conn != nil {
-		<- time.After(5*time.Second)
+	for c != nil && c.conn != nil {
+		<-time.After(5 * time.Second)
 	}
 
 	fmt.Println("*** WOOT ***")
+}
+func quit(code ...int){
+	if code == nil {
+		code = []int{0}
+	}
+		os.Exit(code[0])
 }
