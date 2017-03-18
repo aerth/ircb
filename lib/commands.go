@@ -29,7 +29,10 @@ func init() {
 
 func dofortune(c *Connection, irc IRC) {
 	cmd := exec.Command("fortune", "-s")
-	b, _ := cmd.Output()
+	b, err := cmd.Output()
+	if err != nil {
+		c.WriteMaster(string(err.Error()))
+	}
 	c.SlowSend(irc.Channel, string(b))
 }
 
