@@ -40,7 +40,7 @@ func (c *Connection) ircb() {
 		}
 
 		// send to log
-	 	c.Log(fmt.Sprintf("< %v %s", len(c.netlog), read))
+		c.Log(fmt.Sprintf("< %v %s", len(c.netlog), read))
 
 		// respond to PING quick
 		if strings.HasPrefix(clean(read), "PING") {

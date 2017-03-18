@@ -79,12 +79,9 @@ func registerMasterCommands() map[string]func(c *Connection, irc IRC) {
 		}
 	}
 
-
 	masterCommands["list"] = func(c *Connection, irc IRC) {
 
 	}
-
-
 
 	masterCommands["q"] = func(c *Connection, irc IRC) {
 		c.Stop()
@@ -93,7 +90,10 @@ func registerMasterCommands() map[string]func(c *Connection, irc IRC) {
 		if len(irc.CommandArguments) > 1 {
 		} else {
 			c.WriteMaster(red.Sprintf("Not enough args for %q", irc.Command))
+			return
 		}
+		c.Config.Channels = append(c.Config.Channels, irc.CommandArguments[1])
+		c.WriteMaster(green.Sprintf("Autojoin channel: %q", irc.CommandArguments[1]))
 	}
 	masterCommands["save-config"] = func(c *Connection, irc IRC) {
 		err := c.Config.Save()

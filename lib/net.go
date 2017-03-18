@@ -226,10 +226,10 @@ func (c *Connection) startup() {
 		green.Println("[connected]")
 	}()
 
-	read := <- c.Reader
+	read := <-c.Reader
 	// SASL (no SERVICES)
 	if c.Config.Password != "" && !c.Config.UseServices {
-		c.AuthSASL1()    // require SASL before registering
+		c.AuthSASL1() // require SASL before registering
 	}
 	// Register NICK/USER
 	c.AuthRegister() // NICK/USER
@@ -253,7 +253,7 @@ func (c *Connection) startup() {
 			os.Exit(1)
 			return
 		}
-	
+
 		// Parse IRC
 		irc := ParseIRC(read, c.Config.CommandPrefix)
 
@@ -274,7 +274,7 @@ func (c *Connection) startup() {
 			fmt.Println("PONGMF")
 			c.Writer <- strings.Replace(read, "PING", "PONG", -1)
 		case "NOTICE":
-				continue // need MODE to exit startup
+			continue // need MODE to exit startup
 		case "NICK":
 			if strings.Contains(irc.Message, c.Config.Master) {
 				c.WriteMaster(c.Config.CommandPrefix)
