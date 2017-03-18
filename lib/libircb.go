@@ -15,10 +15,12 @@ import (
 const (
 	// PRIVMSG const
 	PRIVMSG = "PRIVMSG"
-
 	// STOP is used to stop a channel
 	STOP = "STOP"
 )
+
+var commit string
+var version = "ircb v0.0.3 (https://github.com/aerth/ircb/)"
 
 // Writes when needed
 func (c *Connection) netWriter() {
@@ -69,8 +71,7 @@ func (c *Connection) ircb() {
 			return
 		}
 
-		irc := ParseIRC(read, c.Config.CommandPrefix)
-		c.HandleIRC(irc)
+		go c.HandleIRC(ParseIRC(read, c.Config.CommandPrefix))
 	}
 }
 

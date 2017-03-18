@@ -213,6 +213,7 @@ func registerCommands() map[string]func(c *Connection, irc IRC) {
 
 	// -=ping
 	commands["ping"] = CommandSay("pong")
+	commands["v"] = CommandSay(version)
 
 	// -=help
 	commands["help"] = ListCommands
