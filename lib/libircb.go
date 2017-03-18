@@ -22,6 +22,42 @@ const (
 var commit string
 var version = "ircb v0.0.3 (https://github.com/aerth/ircb/)"
 
+// ircb logs net receives. responds to PING or handle parsed irc message
+func (c *Connection) ircb() {
+	c.Config.Commands = registerCommands()
+	c.Config.MasterCommands = registerMasterCommands()
+	if c.Config.Verbose {
+		c.Log(green.Sprint("[ircb] on"))
+		defer c.Log(green.Sprint("[ircb] off"))
+	}
+
+	for read := range c.Reader {
+
+		// backup and truncate netlog
+		if len(c.netlog) >= 50 {
+			doreport(c.netlog)
+			c.netlog = []string{read}
+		}
+
+		// send to log
+	 	c.Log(fmt.Sprintf("< %v %s", len(c.netlog), read))
+
+		// respond to PING quick
+		if strings.HasPrefix(clean(read), "PING") {
+			c.Writer <- strings.Replace(read, "PING", "PONG", -1)
+			continue
+		}
+
+		// stop
+		if read == STOP {
+			return
+		}
+
+		// parse IRC message and handle in a goroutine
+		go c.HandleIRC(ParseIRC(read, c.Config.CommandPrefix))
+	}
+}
+
 // Writes when needed
 func (c *Connection) netWriter() {
 	if c.Config.Verbose {
@@ -47,32 +83,6 @@ func (c *Connection) netWriter() {
 		}
 	}()
 
-}
-
-// ircb only responds to pings, INT verbs, and PRIVMSG verbs for now
-func (c *Connection) ircb() {
-	c.Config.Commands = registerCommands()
-	c.Config.MasterCommands = registerMasterCommands()
-	if c.Config.Verbose {
-		c.Log(green.Sprint("[ircb] on"))
-		defer c.Log(green.Sprint("[ircb] off"))
-	}
-	for read := range c.Reader {
-		c.Netlog = append(c.Netlog, read)
-
-		c.Log(fmt.Sprintf("< %v %s", len(c.Netlog), read))
-
-		if strings.HasPrefix(clean(read), "PING") {
-			c.Writer <- strings.Replace(read, "PING", "PONG", -1)
-			continue
-		}
-
-		if read == STOP {
-			return
-		}
-
-		go c.HandleIRC(ParseIRC(read, c.Config.CommandPrefix))
-	}
 }
 
 // netInput stays on. Reads from irc connection, sends to c.Reader channel.
@@ -115,7 +125,7 @@ func (c *Connection) netReader() {
 func (c *Connection) initialConnect() {
 	go c.netWriter()
 	go c.netReader()
-	go c.initializeConnection() // registers, waits for MODE set and launches c.ircb()
+	go c.startup() // registers, waits for MODE set and launches c.ircb()
 }
 
 // joinChannels joins config channels and sends bot master the command prefix
@@ -132,13 +142,13 @@ func (c *Connection) joinChannels() {
 
 }
 
+// Loop will continue until connection is nil
 func (c *Connection) Loop() {
-	for c != nil && c.conn != nil {
+	for c != nil {
 		<-time.After(5 * time.Second)
 	}
-
-	fmt.Println("*** WOOT ***")
 }
+
 func quit(code ...int) {
 	if code == nil {
 		code = []int{0}

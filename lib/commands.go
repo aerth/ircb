@@ -203,7 +203,7 @@ func registerCommands() map[string]func(c *Connection, irc IRC) {
 
 	// -=about
 	commands["about"] = func(c *Connection, irc IRC) {
-		c.Write(irc.Channel, "ircb v2 (https://github.com/aerth/ircb)")
+		c.Write(irc.Channel, "ircb v0.0.3 (https://github.com/aerth/ircb)")
 	}
 	// -=hello
 	commands["hello"] = CommandSayf("Hello, %s", "channel")
@@ -229,6 +229,7 @@ func registerCommands() map[string]func(c *Connection, irc IRC) {
 	return commands
 }
 
+// ListCommands for public
 func ListCommands(c *Connection, irc IRC) {
 	c.Write(irc.Channel, c.Config.ListCommands())
 }

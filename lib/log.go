@@ -149,6 +149,16 @@ func (config *Config) ListCommands() string {
 	return commands
 }
 
+// String config
+func (config *Config) ListMasterCommands() string {
+	var commands string
+	commands += fmt.Sprintf("*Total: %v\n", len(config.Commands))
+	for key := range config.Commands {
+		commands += fmt.Sprintf("*Command: %s\n", key)
+	}
+	return commands
+}
+
 func randint() int {
 	return rand.Intn(9)
 }

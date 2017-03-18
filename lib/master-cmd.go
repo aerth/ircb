@@ -1,6 +1,7 @@
 package ircb
 
 import (
+	"os"
 	"strings"
 	"time"
 
@@ -15,29 +16,18 @@ import (
  *
  */
 
-/*
-
-
- *
- *
- *
- *
- *
- *
- *
- */
-
 // HandleMasterCommand handles master commands
 func (c *Connection) HandleMasterCommand(irc IRC) (handled bool) {
 	if irc.Command == "" {
 		return false
 	}
-	c.Logf("[MasterCommand] %q %q\n", irc.Command, irc.Message)
 
 	if c.Config.MasterCommands == nil {
 		c.Write(irc.From, "no")
 		return false
 	}
+
+	c.Logf("[MasterCommand] %q %q\n", irc.Command, irc.Message)
 
 	if c.Config.MasterCommands[irc.Command] != nil {
 		c.Config.MasterCommands[irc.Command](c, irc)
@@ -49,26 +39,55 @@ func (c *Connection) HandleMasterCommand(irc IRC) (handled bool) {
 
 }
 
-// func (c *Connection) isIdentified(name string) bool {
-// 	c.Writer <- "WHOIS " + c.Config.Master
-// 	line := c.WaitFor([]string{"is logged in as", "account"}, time.Second)
-// 	if line == -1 {
-// 		return false
-// 	}
-// 	irc := ParseIRC(c.Netlog[line], c.Config.CommandPrefix)
-// 	return strings.Contains(irc.Message, c.Config.Master)
-// }
+// listMasterCommands for botmaster
+func listMasterCommands(c *Connection, irc IRC) {
+	c.Write(irc.Channel, c.Config.ListMasterCommands())
+}
 
+// list of built-in masterCommands
 func registerMasterCommands() map[string]func(c *Connection, irc IRC) {
 	var masterCommands = map[string]func(c *Connection, irc IRC){}
 
 	masterCommands["part"] = func(c *Connection, irc IRC) {
-		c.Writer <- "PART " + irc.Channel
+		if len(irc.CommandArguments) > 1 {
+			c.Write(irc.Channel, "PART "+strings.Join(irc.CommandArguments[1:], " "))
+			c.Writer <- "PART " + strings.Join(irc.CommandArguments[1:], " ")
+		}
+	}
+	masterCommands["join"] = func(c *Connection, irc IRC) {
+		if len(irc.CommandArguments) > 1 {
+			c.Write(irc.Channel, "JOIN "+strings.Join(irc.CommandArguments[1:], " "))
+			c.Writer <- "JOIN " + strings.Join(irc.CommandArguments[1:], " ")
+		}
+	}
+
+	masterCommands["tell"] = func(c *Connection, irc IRC) {
+		if len(irc.CommandArguments) > 1 {
+			c.Write(irc.CommandArguments[1], strings.Join(irc.CommandArguments[2:], " "))
+		}
+	}
+
+	masterCommands["getenv"] = func(c *Connection, irc IRC) {
+		if len(irc.CommandArguments) == 2 {
+			c.Write(c.Config.Master, os.Getenv(irc.CommandArguments[1]))
+		}
+	}
+	masterCommands["setenv"] = func(c *Connection, irc IRC) {
+		if len(irc.CommandArguments) > 2 {
+			os.Setenv(irc.CommandArguments[1], (irc.CommandArguments[2]))
+			c.WriteMaster("set")
+		}
+	}
+
+
+	masterCommands["list"] = func(c *Connection, irc IRC) {
 
 	}
+
+
+
 	masterCommands["q"] = func(c *Connection, irc IRC) {
 		c.Stop()
-
 	}
 	masterCommands["autojoin"] = func(c *Connection, irc IRC) {
 		if len(irc.CommandArguments) > 1 {
@@ -92,7 +111,6 @@ func registerMasterCommands() map[string]func(c *Connection, irc IRC) {
 			return
 		}
 		c.Write(irc.Channel, "config reloaded. restart for changes to take effect.")
-
 	}
 	masterCommands["r"] = func(c *Connection, irc IRC) {
 		for _, v := range c.Config.Channels {

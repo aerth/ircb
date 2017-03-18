@@ -26,7 +26,7 @@ import (
 type Connection struct {
 	Host                string
 	Config              *Config
-	Netlog              []string
+	netlog              []string
 	Reader, Writer      chan string
 	connected, authsent bool
 	logfile             *os.File
@@ -35,6 +35,8 @@ type Connection struct {
 
 // Connect returns a connection
 func (config *Config) Connect() *Connection {
+
+	// some required fields
 	for key, v := range map[string]string{
 		"Master":        config.Master,
 		"Hostname":      config.Hostname,
@@ -159,17 +161,17 @@ func (config *Config) NewDialer() {
 
 func realHostname(c *Connection) string {
 
-	for i := 0; len(c.Netlog) < 1; i++ {
+	for i := 0; len(c.netlog) < 1; i++ {
 		if i >= 5 {
 			fmt.Printf("Timeout.")
 			c.Stop()
 			os.Exit(1)
 		}
 		alertf("No netlog, waiting. Try %v\n", i)
-		<-time.After(time.Millisecond * 500) // need 1 netlog to gather real hostname
+		<-time.After(time.Millisecond * 1000) // need 1 netlog to gather real hostname
 	}
 
-	return strings.TrimPrefix(strings.Split(c.Netlog[0], " ")[0], ":")
+	return strings.TrimPrefix(strings.Split(c.netlog[0], " ")[0], ":")
 }
 
 // Reconnect after disconnecting
@@ -181,6 +183,7 @@ func (c *Connection) Reconnect() {
 // Stop will quit clean, Stop("reconnect") will attempt to reconnect
 func (c *Connection) Stop(args ...interface{}) {
 	quitmsg := ""
+	reconnecting := "reconnecting"
 	if c.Config.Verbose {
 		fmt.Println("Attempting [STOP]")
 	}
@@ -193,7 +196,7 @@ func (c *Connection) Stop(args ...interface{}) {
 		case string:
 			fmt.Println(green.Sprint(arg))
 			if arg == "reconnect" {
-				quitmsg = "reconnecting"
+				quitmsg = reconnecting
 			} else {
 				quitmsg = arg.(string)
 			}
@@ -202,8 +205,8 @@ func (c *Connection) Stop(args ...interface{}) {
 		}
 	}
 
-	if c != nil && quitmsg != "reconnecting" {
-		doreport(c.Netlog)
+	if c != nil && quitmsg != reconnecting {
+		doreport(c.netlog)
 		if quitmsg != "" {
 			go func() { c.Writer <- "QUIT :" + quitmsg }()
 		}
@@ -223,7 +226,7 @@ func (c *Connection) Stop(args ...interface{}) {
 
 	fmt.Fprintln(os.Stderr, "ircb: gone", time.Now().String())
 	c = nil
-	if quitmsg != "reconnecting" {
+	if quitmsg != reconnecting {
 		go func() {
 			<-time.After(3 * time.Second)
 			os.Exit(0)
@@ -231,15 +234,15 @@ func (c *Connection) Stop(args ...interface{}) {
 	}
 }
 
-// initializeConnection
-func (c *Connection) initializeConnection() {
+// startup
+func (c *Connection) startup() {
 	green.Println("[connecting]")
 	defer func() {
 		green.Println("[connected]")
 	}()
 
 	for read := range c.Reader {
-		c.Netlog = append(c.Netlog, read)
+		c.netlog = append(c.netlog, read)
 
 		// ircb STOP
 		if read == STOP {
@@ -255,15 +258,16 @@ func (c *Connection) initializeConnection() {
 
 		// Parse IRC
 		irc := ParseIRC(read, c.Config.CommandPrefix)
-		// Is number verb
+
 		verbint, err := strconv.Atoi(irc.Verb)
-		if err == nil {
-			c.HandleVerbINT(verbint, irc)
-			continue // need MODE
+		if err == nil { // is number verb
+			if c.HandleVerbINT(verbint, irc) {
+				continue // need MODE to exit startup to exit startup
+			}
 		}
 
 		if irc.Verb != "" {
-			c.Log(fmt.Sprintf("< %v %s", len(c.Netlog), read))
+			c.Log(fmt.Sprintf("< %v %s", len(c.netlog), read))
 		}
 
 		// Three non-int verbs matter during inital connection
@@ -272,7 +276,7 @@ func (c *Connection) initializeConnection() {
 			fmt.Println("PONGMF")
 			c.Writer <- strings.Replace(read, "PING", "PONG", -1)
 		case "NOTICE":
-			if len(c.Netlog) == 1 {
+			if len(c.netlog) == 1 {
 				// SASL (no SERVICES)
 				if c.Config.Password != "" && !c.Config.UseServices {
 					c.AuthSASL1()    // require SASL before registering
@@ -288,7 +292,7 @@ func (c *Connection) initializeConnection() {
 					c.AuthServices()
 				}
 
-				continue // need MODE
+				continue // need MODE to exit startup
 			}
 		case "NICK":
 			if strings.Contains(irc.Message, c.Config.Master) {
@@ -302,7 +306,7 @@ func (c *Connection) initializeConnection() {
 			if !c.Config.UseServices && irc.Message == "ACK :multi-prefix sasl" {
 				fmt.Println("AuthSasl2")
 				c.AuthSASL2()
-				continue // need MODE
+				continue // need MODE to exit startup
 			}
 		}
 	}
@@ -316,10 +320,10 @@ func (c *Connection) WaitFor(grep []string, timelimit time.Duration) int {
 
 	go func() {
 		var all []string
-		copy(all, c.Netlog)
+		copy(all, c.netlog)
 		for i := len(all) - 1; i >= 0; i-- {
 			// Got new message
-			if len(c.Netlog) != len(all) {
+			if len(c.netlog) != len(all) {
 				filter <- (-1)
 			}
 			for _, grepfor := range grep {

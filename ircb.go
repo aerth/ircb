@@ -109,6 +109,29 @@ func DoConfig() *ircb.Config {
 		os.Exit(1)
 	}
 
+	config := configFromFlags()
+
+	// load json from ConfigLocation
+	err := config.Reload()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "[config] read error:", err)
+	}
+	visitFlags(config)
+	// create dialer
+	config.NewDialer()
+
+	// save (updated) config to file
+	err = config.Save()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "[config] write error:", err)
+		os.Exit(1)
+	}
+
+	return config
+}
+
+func configFromFlags() *ircb.Config {
+
 	// load defaults from flagset
 	config := new(ircb.Config)
 	config.Boottime = time.Now()
@@ -129,13 +152,11 @@ func DoConfig() *ircb.Config {
 	config.UseServices = *useservices
 	config.ConfigLocation = *configloc
 	config.Version = built
+	return config
 
-	// load json from ConfigLocation
-	err := config.Reload()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "[config] read error:", err)
-	}
+}
 
+func visitFlags(config *ircb.Config) {
 	// visit user flags, over-riding config file
 	flag.Visit(func(a *flag.Flag) {
 		switch a.Name {
@@ -175,15 +196,4 @@ func DoConfig() *ircb.Config {
 
 	}) // flag.Visit
 
-	// create dialer
-	config.NewDialer()
-
-	// save (updated) config to file
-	err = config.Save()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "[config] write error:", err)
-		os.Exit(1)
-	}
-
-	return config
 }

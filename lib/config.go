@@ -34,6 +34,7 @@ type Config struct {
 
 	Channels []string
 	//ChannelPassword                   map[string]string
+	//ServerPassword                   string
 
 	UseServices, NoTLS, InvalidTLS, Verbose, NoSecurity bool
 
