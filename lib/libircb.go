@@ -50,6 +50,7 @@ func (c *Connection) netWriter() {
 // ircb only responds to pings, INT verbs, and PRIVMSG verbs for now
 func (c *Connection) ircb() {
 	c.Config.Commands = registerCommands()
+	c.Config.MasterCommands = registerMasterCommands()
 	if c.Config.Verbose {
 		c.Log(green.Sprint("[ircb] on"))
 		defer c.Log(green.Sprint("[ircb] off"))
@@ -119,7 +120,7 @@ func (c *Connection) initialConnect() {
 // joinChannels joins config channels and sends bot master the command prefix
 func (c *Connection) joinChannels() {
 	// msg master
-	c.WriteMaster("Prefix commands with \""+green.Sprint(c.Config.CommandPrefix)+"\"")
+	c.WriteMaster("Prefix commands with \"" + green.Sprint(c.Config.CommandPrefix) + "\"")
 	c.WriteMaster(orange.Sprintf("Joining channels: %q", c.Config.Channels))
 
 	// join channels
@@ -137,9 +138,9 @@ func (c *Connection) Loop() {
 
 	fmt.Println("*** WOOT ***")
 }
-func quit(code ...int){
+func quit(code ...int) {
 	if code == nil {
 		code = []int{0}
 	}
-		os.Exit(code[0])
+	os.Exit(code[0])
 }

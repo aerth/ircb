@@ -61,6 +61,7 @@ func CommandSay(s string) func(c *Connection, irc IRC) {
 		c.Write(irc.Channel, s)
 	}
 }
+
 // CommandSayf returns command function that says s
 func CommandSayf(s string, si ...string) func(c *Connection, irc IRC) {
 	return func(c *Connection, irc IRC) {
@@ -165,19 +166,23 @@ func (c *Connection) HandlePRIVMSG(irc IRC) bool {
 	if c.Config.Commands[cmd] != nil {
 		c.Log(orange.Sprint("Command map command"))
 		c.Config.Commands[cmd](c, irc)
-		return handled
-	}
+		return true
 
+	}
+	if irc.From == c.Config.Master && c.Config.MasterCommands[cmd] != nil {
+		c.Config.MasterCommands[cmd](c, irc)
+		return true
+	}
 	c.Log(blue.Sprintf("switch cmd: %q ", cmd))
 	switch cmd { // first word
-		case "h", "help", "commands", "list":
-			if c.Config.Commands["help"] != nil {
+	case "h", "help", "commands", "list":
+		if c.Config.Commands["help"] != nil {
 			c.Config.Commands["help"](c, irc)
 		}
-			return handled
-		case "about":
-			c.Write(irc.Channel, fmt.Sprintf("%s: ircb v%s source code at https://github.com/aerth/ircb", irc.From, c.Config.Version))
-			return handled
+		return handled
+	case "about":
+		c.Write(irc.Channel, fmt.Sprintf("%s: ircb v%s source code at https://github.com/aerth/ircb", irc.From, c.Config.Version))
+		return handled
 	default:
 		// started with command prefix, but not found in Command map or above cases.
 		if strings.Contains(irc.From, c.Config.Master) && getuser(irc.From) == c.Config.Master {
@@ -196,37 +201,37 @@ func getuser(s string) string {
 func registerCommands() map[string]func(c *Connection, irc IRC) {
 	var commands = map[string]func(c *Connection, irc IRC){}
 
-		// -=about
-		commands["about"] = func(c *Connection, irc IRC) {
-			c.Write(irc.Channel, "ircb v2 (https://github.com/aerth/ircb)")
-		}
-		// -=hello
-		commands["hello"] = CommandSayf("Hello, %s", "channel")
+	// -=about
+	commands["about"] = func(c *Connection, irc IRC) {
+		c.Write(irc.Channel, "ircb v2 (https://github.com/aerth/ircb)")
+	}
+	// -=hello
+	commands["hello"] = CommandSayf("Hello, %s", "channel")
 
-		// -=up
-		commands["up"] = douptime
+	// -=up
+	commands["up"] = douptime
 
-		// -=ping
-		commands["ping"] = CommandSay("pong")
+	// -=ping
+	commands["ping"] = CommandSay("pong")
 
-		// -=help
-		commands["help"] = ListCommands
+	// -=help
+	commands["help"] = ListCommands
 
-		// ircb logo
-		commands["ircb"] = CommandSlowSay(logo)
+	// ircb logo
+	commands["ircb"] = CommandSlowSay(logo)
 
-		// beer me
-		commands["beer"] = CommandSayf("Have a beer, %s", "from")
+	// beer me
+	commands["beer"] = CommandSayf("Have a beer, %s", "from")
 
-		// -=fortune
-		commands["fortune"] = dofortune
-		return commands
+	// -=fortune
+	commands["fortune"] = dofortune
+	return commands
 }
 
-func ListCommands(c *Connection, irc IRC){
+func ListCommands(c *Connection, irc IRC) {
 	c.Write(irc.Channel, c.Config.ListCommands())
 }
 
-func douptime(c *Connection, irc IRC){
+func douptime(c *Connection, irc IRC) {
 	c.Write(irc.Channel, "Uptime: "+time.Now().Sub(boottime).String())
 }

@@ -62,7 +62,7 @@ func (config *Config) Connect() *Connection {
 
 	config.owners = map[string]int{}
 	config.owners[config.Master] = 1
-	for _, v := range strings.Split(config.Owners,",") {
+	for _, v := range strings.Split(config.Owners, ",") {
 		config.owners[v] = 2
 	}
 	c := new(Connection)
@@ -205,13 +205,13 @@ func (c *Connection) Stop(args ...interface{}) {
 	if c != nil && quitmsg != "reconnecting" {
 		doreport(c.Netlog)
 		if quitmsg != "" {
-			go func() { c.Writer <- "QUIT :"+quitmsg }()
+			go func() { c.Writer <- "QUIT :" + quitmsg }()
 		}
-		<-time.After(500*time.Millisecond)
+		<-time.After(500 * time.Millisecond)
 		go func() { c.Writer <- STOP }()
-		<-time.After(500*time.Millisecond)
+		<-time.After(500 * time.Millisecond)
 		go func() { c.Reader <- STOP }()
-		<-time.After(500*time.Millisecond)
+		<-time.After(500 * time.Millisecond)
 	}
 
 	if c != nil && c.conn != nil {
@@ -224,11 +224,11 @@ func (c *Connection) Stop(args ...interface{}) {
 	fmt.Fprintln(os.Stderr, "ircb: gone", time.Now().String())
 	c = nil
 	if quitmsg != "reconnecting" {
-	go func(){
-		<- time.After(3*time.Second)
-		os.Exit(0)
-	}()
-}
+		go func() {
+			<-time.After(3 * time.Second)
+			os.Exit(0)
+		}()
+	}
 }
 
 // initializeConnection
@@ -350,7 +350,7 @@ func (c *Connection) Write(channel, message string) {
 	if !strings.Contains(message, "\n") {
 		c.Writer <- fmt.Sprintf(`PRIVMSG %s :%s`, channel, message)
 	} else {
-			c.SlowSend(channel, message)
+		c.SlowSend(channel, message)
 	}
 }
 

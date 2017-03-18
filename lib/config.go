@@ -25,7 +25,7 @@ type Config struct {
 
 	Master                            string // irc user
 	Owners                            string // comma separated
-	owners														map[string]int
+	owners                            map[string]int
 	Hostname                          string
 	Port                              int
 	Name, AuthName, Account, Password string
@@ -39,18 +39,16 @@ type Config struct {
 
 	CommandPrefix string
 
-	Commands map[string]func(c *Connection, irc IRC) `json:"-"`
-
+	Commands, MasterCommands map[string]func(c *Connection, irc IRC) `json:"-"`
 }
 
 // Save config to ('.config') by default
 func (c *Config) Save() error {
 
 	for key := range c.owners {
-		c.Owners += key+","
+		c.Owners += key + ","
 	}
 	c.Owners = strings.TrimSuffix(c.Owners, ",")
-
 
 	// Create new config, writing over existing.
 	configFile, err := os.OpenFile(c.ConfigLocation, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0640)
