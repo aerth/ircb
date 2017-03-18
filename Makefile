@@ -42,3 +42,6 @@ run:
 
 clean:
 	@rm -v ${NAME}
+
+d:
+	go build -v -race -x

@@ -92,10 +92,6 @@ func (config *Config) Connect() *Connection {
 
 	// do once
 	go c.initialConnect()
-	<-time.After(time.Millisecond * 1000) // need 1 netlog to gather real hostname
-
-	// find hostname
-	c.Host = realHostname(c)
 	return c
 }
 
@@ -159,19 +155,8 @@ func (config *Config) NewDialer() {
 	config.Dialer = proxydialer
 }
 
-func realHostname(c *Connection) string {
-
-	for i := 0; len(c.netlog) < 1; i++ {
-		if i >= 5 {
-			fmt.Printf("Timeout.")
-			c.Stop()
-			os.Exit(1)
-		}
-		alertf("No netlog, waiting. Try %v\n", i)
-		<-time.After(time.Millisecond * 1000) // need 1 netlog to gather real hostname
-	}
-
-	return strings.TrimPrefix(strings.Split(c.netlog[0], " ")[0], ":")
+func realHostname(s string) string {
+	return strings.TrimPrefix(strings.Split(s, " ")[0], ":")
 }
 
 // Reconnect after disconnecting
@@ -241,6 +226,19 @@ func (c *Connection) startup() {
 		green.Println("[connected]")
 	}()
 
+	read := <- c.Reader
+	// SASL (no SERVICES)
+	if c.Config.Password != "" && !c.Config.UseServices {
+		c.AuthSASL1()    // require SASL before registering
+	}
+	// Register NICK/USER
+	c.AuthRegister() // NICK/USER
+	if c.Config.Password != "" && c.Config.UseServices {
+		c.AuthServices()
+	}
+	c.netlog = append(c.netlog, read)
+	c.Log(fmt.Sprintf("< %v %s", len(c.netlog), read))
+	c.Host = strings.TrimPrefix(strings.Split(read, " ")[0], ":")
 	for read := range c.Reader {
 		c.netlog = append(c.netlog, read)
 
@@ -255,7 +253,7 @@ func (c *Connection) startup() {
 			os.Exit(1)
 			return
 		}
-
+	
 		// Parse IRC
 		irc := ParseIRC(read, c.Config.CommandPrefix)
 
@@ -276,24 +274,7 @@ func (c *Connection) startup() {
 			fmt.Println("PONGMF")
 			c.Writer <- strings.Replace(read, "PING", "PONG", -1)
 		case "NOTICE":
-			if len(c.netlog) == 1 {
-				// SASL (no SERVICES)
-				if c.Config.Password != "" && !c.Config.UseServices {
-					c.AuthSASL1()    // require SASL before registering
-					c.AuthRegister() // NICK/USER
-					continue
-				}
-
-				// Register NICK/USER
-				c.AuthRegister() // NICK/USER
-
-				// USE SERVICES
-				if c.Config.UseServices {
-					c.AuthServices()
-				}
-
 				continue // need MODE to exit startup
-			}
 		case "NICK":
 			if strings.Contains(irc.Message, c.Config.Master) {
 				c.WriteMaster(c.Config.CommandPrefix)
