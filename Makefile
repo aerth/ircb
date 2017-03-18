@@ -13,6 +13,13 @@ RELEASE ?= ${VERSION}${COMMIT}
 
 all:	${NAME}
 
+help:
+	@echo ircb - https://github.com/aerth/ircb
+	@echo
+	@echo make build - build using gc
+	@echo make fast - build using cgo
+	@echo make d - build with race detector
+
 fast:
 	CGO_ENABLED=1 go build -o ${NAME} -x --ldflags "-s -extldflags='-static' -X main.version=${RELEASE}" .
 
