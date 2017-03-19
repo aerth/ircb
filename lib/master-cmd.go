@@ -41,7 +41,15 @@ func (c *Connection) HandleMasterCommand(irc IRC) (handled bool) {
 
 // listMasterCommands for botmaster
 func listMasterCommands(c *Connection, irc IRC) {
-	c.Write(irc.Channel, c.Config.ListMasterCommands())
+	c.WriteMaster(c.Config.ListMasterCommands())
+}
+
+func listMasterTools(c *Connection, irc IRC) {
+	c.WriteMaster(c.Config.ListMasterTools())
+}
+
+func listTools(c *Connection, irc IRC) {
+	c.Write(irc.From, c.Config.ListTools())
 }
 
 // list of built-in masterCommands
@@ -197,6 +205,20 @@ func registerMasterCommands() map[string]func(c *Connection, irc IRC) {
 	}
 	masterCommands["do"] = func(c *Connection, irc IRC) {
 		c.Writer <- strings.TrimPrefix(irc.Message, c.Config.CommandPrefix+"do ")
+	}
+
+	masterCommands["list*"] = listMasterCommands
+	masterCommands["help*"] = listMasterCommands
+	masterCommands["mtools"] = listMasterTools
+	masterCommands["mtool"] = domtool
+	masterCommands["reload-tools"] = func(c *Connection, irc IRC) {
+		var err error
+		c.Config.Tools, err = registerTools()
+		if err != nil {
+			c.WriteMaster("reload failed: " + err.Error())
+			return
+		}
+		c.WriteMaster("Tools reloaded.")
 	}
 
 	return masterCommands

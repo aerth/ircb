@@ -135,11 +135,11 @@ func rnbo(s string) string {
 }
 
 // String config
-func (c *Config) String() string {
-	return fmt.Sprintf("%# v\n", pretty.Formatter(c))
+func (config *Config) String() string {
+	return fmt.Sprintf("%# v\n", pretty.Formatter(config))
 }
 
-// String config
+// ListCommands string
 func (config *Config) ListCommands() string {
 	var commands string
 	commands += fmt.Sprintf("Total: %v\n", len(config.Commands))
@@ -149,14 +149,34 @@ func (config *Config) ListCommands() string {
 	return commands
 }
 
-// String config
+// ListMasterCommands returns a string
 func (config *Config) ListMasterCommands() string {
 	var commands string
-	commands += fmt.Sprintf("*Total: %v\n", len(config.Commands))
-	for key := range config.Commands {
+	commands += fmt.Sprintf("*Total: %v\n", len(config.MasterCommands))
+	for key := range config.MasterCommands {
 		commands += fmt.Sprintf("*Command: %s\n", key)
 	}
 	return commands
+}
+
+// ListMasterTools returns a list of tools in the tool dir
+func (config *Config) ListMasterTools() string {
+	var tools string
+	tools += fmt.Sprintf("*Tools: %v\n", len(config.MasterTools))
+	for tool := range config.MasterTools {
+		tools += fmt.Sprintf("*Tool: %s\n", tool)
+	}
+	return tools
+}
+
+// ListTools returns a list of tools in the tool dir
+func (config *Config) ListTools() string {
+	var tools string
+	tools += fmt.Sprintf("*Tools: %v\n", len(config.Tools))
+	for tool := range config.Tools {
+		tools += fmt.Sprintf("*Tool: %s\n", tool)
+	}
+	return tools
 }
 
 func randint() int {

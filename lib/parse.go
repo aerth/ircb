@@ -91,6 +91,10 @@ func (c *Connection) HandleIRC(irc IRC) {
 		} else if strings.Contains(irc.Message, c.Config.Name) {
 			c.WriteMaster(green.Sprintf("%s [%s] %q", irc.Channel, irc.From, irc.Message))
 		}
+		if irc.Channel == c.Config.Name {
+			irc.Channel = cyan.Sprint("private")
+		}
+		c.Logf("[%s] %s %s", irc.Channel, irc.From, irc.Message)
 	case ":Closing":
 		quit()
 	case "QUIT", "PART": //
@@ -111,7 +115,5 @@ func (c *Connection) HandleIRC(irc IRC) {
 	case "MODE":
 		mode := irc.Message
 		c.WriteMaster(blue.Sprint(strings.TrimPrefix(irc.Channel, "= ")) + " GOT MODE " + green.Sprint(mode))
-
 	}
-
 }

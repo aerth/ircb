@@ -20,41 +20,51 @@ const (
 )
 
 var commit string
-var version = "ircb v0.0.3 (https://github.com/aerth/ircb/)"
+var version = "ircb v0.0.4 (https://github.com/aerth/ircb/)"
+var versionstring = version + "-" + commit
+
+func (c *Connection) registercommands() {
+	c.Config.Commands = registerCommands()
+	c.Config.MasterCommands = registerMasterCommands()
+	var err error
+	c.Config.MasterTools, err = registerMasterTools()
+	if err != nil {
+		c.Log("Can't register master tools:", err)
+	}
+	c.Config.Tools, err = registerTools()
+	if err != nil {
+		c.Log("Can't register public tools:", err)
+	}
+
+}
 
 // ircb logs net receives. responds to PING or handle parsed irc message
 func (c *Connection) ircb() {
-	c.Config.Commands = registerCommands()
-	c.Config.MasterCommands = registerMasterCommands()
+
 	if c.Config.Verbose {
 		c.Log(green.Sprint("[ircb] on"))
 		defer c.Log(green.Sprint("[ircb] off"))
 	}
+	for {
+		select {
+		case <-time.After(30 * time.Second):
+			c.Log(green.Sprint("ircb") + ": no net reads (30s)")
+		case read := <-c.Reader:
+			//c.Log(green.Sprint("ircb")+":", read)
+			if strings.HasPrefix(clean(read), "PING") {
+				fmt.Println(red.Sprint("WRONG PONG"))
+				c.Writer <- strings.Replace(read, "PING", "PONG", -1)
+				continue
+			}
 
-	for read := range c.Reader {
+			// stop
+			if read == STOP {
+				return
+			}
 
-		// backup and truncate netlog
-		if len(c.netlog) >= 50 {
-			doreport(c.netlog)
-			c.netlog = []string{read}
+			// parse IRC message and handle in a goroutine
+			go c.HandleIRC(ParseIRC(read, c.Config.CommandPrefix))
 		}
-
-		// send to log
-		c.Log(fmt.Sprintf("< %v %s", len(c.netlog), read))
-
-		// respond to PING quick
-		if strings.HasPrefix(clean(read), "PING") {
-			c.Writer <- strings.Replace(read, "PING", "PONG", -1)
-			continue
-		}
-
-		// stop
-		if read == STOP {
-			return
-		}
-
-		// parse IRC message and handle in a goroutine
-		go c.HandleIRC(ParseIRC(read, c.Config.CommandPrefix))
 	}
 }
 
@@ -113,7 +123,7 @@ func (c *Connection) netReader() {
 
 			// non-fatal error, reconnect
 			fmt.Fprintf(os.Stderr, "Error [%s] while reading message, reconnecting...\n", err)
-			c.Reconnect()
+			go c.Reconnect()
 			return
 		}
 
@@ -131,6 +141,8 @@ func (c *Connection) initialConnect() {
 // joinChannels joins config channels and sends bot master the command prefix
 func (c *Connection) joinChannels() {
 	// msg master
+	c.WriteMaster(rnbo(logo))
+	c.WriteMaster(rnbo(version))
 	c.WriteMaster("Prefix commands with \"" + green.Sprint(c.Config.CommandPrefix) + "\"")
 	c.WriteMaster(orange.Sprintf("Joining channels: %q", c.Config.Channels))
 

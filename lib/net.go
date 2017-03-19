@@ -24,13 +24,14 @@ import (
 
 // Connection type
 type Connection struct {
-	Host                string
-	Config              *Config
-	netlog              []string
+	Host   string
+	Config *Config
+	//	netlog              []string
 	Reader, Writer      chan string
 	connected, authsent bool
 	logfile             *os.File
 	conn                net.Conn
+	count               int
 }
 
 // Connect returns a connection
@@ -62,15 +63,21 @@ func (config *Config) Connect() *Connection {
 		}
 	}
 
+	config.Tools = map[string]string{}
+	config.MasterTools = map[string]string{}
+
 	config.owners = map[string]int{}
 	config.owners[config.Master] = 1
 	for _, v := range strings.Split(config.Owners, ",") {
 		config.owners[v] = 2
 	}
+
 	c := new(Connection)
 	c.Writer = make(chan string)
 	c.Reader = make(chan string)
 	c.Config = config
+
+	c.registercommands()
 	c.openlogfile()
 	config.NewDialer()
 
@@ -90,8 +97,8 @@ func (config *Config) Connect() *Connection {
 		c.tlsHandshake()
 	}
 
-	// do once
-	go c.initialConnect()
+	c.initialConnect()
+
 	return c
 }
 
@@ -191,7 +198,6 @@ func (c *Connection) Stop(args ...interface{}) {
 	}
 
 	if c != nil && quitmsg != reconnecting {
-		doreport(c.netlog)
 		if quitmsg != "" {
 			go func() { c.Writer <- "QUIT :" + quitmsg }()
 		}
@@ -221,12 +227,14 @@ func (c *Connection) Stop(args ...interface{}) {
 
 // startup
 func (c *Connection) startup() {
+	t1 := time.Now()
 	green.Println("[connecting]")
 	defer func() {
 		green.Println("[connected]")
 	}()
 
 	read := <-c.Reader
+	c.count++
 	// SASL (no SERVICES)
 	if c.Config.Password != "" && !c.Config.UseServices {
 		c.AuthSASL1() // require SASL before registering
@@ -236,110 +244,87 @@ func (c *Connection) startup() {
 	if c.Config.Password != "" && c.Config.UseServices {
 		c.AuthServices()
 	}
-	c.netlog = append(c.netlog, read)
-	c.Log(fmt.Sprintf("< %v %s", len(c.netlog), read))
+	c.Log(fmt.Sprintf("< %v %s", c.count, read))
 	c.Host = strings.TrimPrefix(strings.Split(read, " ")[0], ":")
-	for read := range c.Reader {
-		c.netlog = append(c.netlog, read)
+	c.Log(rnbo(":) connected to " + c.Host))
+	for {
+		select {
+		case <-time.After(time.Second):
+			c.Log(red.Sprint(("no reads")))
+		case read := <-c.Reader:
+			c.count++
 
-		// ircb STOP
-		if read == STOP {
-			return
-		}
-
-		// "Closing Link"
-		if strings.HasPrefix(read, "ERROR") {
-			c.Stop()
-			os.Exit(1)
-			return
-		}
-
-		// Parse IRC
-		irc := ParseIRC(read, c.Config.CommandPrefix)
-
-		verbint, err := strconv.Atoi(irc.Verb)
-		if err == nil { // is number verb
-			if c.HandleVerbINT(verbint, irc) {
-				continue // need MODE to exit startup to exit startup
+			// ircb STOP
+			if read == STOP {
+				return
 			}
-		}
 
-		if irc.Verb != "" {
-			c.Log(fmt.Sprintf("< %v %s", len(c.netlog), read))
-		}
-
-		// Three non-int verbs matter during inital connection
-		switch irc.Verb {
-		case "PING", ":" + c.Host:
-			fmt.Println("PONGMF")
-			c.Writer <- strings.Replace(read, "PING", "PONG", -1)
-		case "NOTICE":
-			continue // need MODE to exit startup
-		case "NICK":
-			if strings.Contains(irc.Message, c.Config.Master) {
-				c.WriteMaster(c.Config.CommandPrefix)
+			// "Closing Link"
+			if strings.HasPrefix(read, "ERROR") {
+				c.Stop()
+				os.Exit(1)
+				return
 			}
-		case "MODE": // got first MODE change. join channels and start ircb
-			go c.ircb()
-			c.joinChannels()
-			return
-		case "CAP":
-			if !c.Config.UseServices && irc.Message == "ACK :multi-prefix sasl" {
-				fmt.Println("AuthSasl2")
-				c.AuthSASL2()
+
+			// Parse IRC
+			irc := ParseIRC(read, c.Config.CommandPrefix)
+			c.Log(cyan.Sprintf("processing: %s %s", irc.Verb, irc.Message))
+
+			verbint, err := strconv.Atoi(irc.Verb)
+			if err == nil { // is number verb
+				if c.HandleVerbINT(verbint, irc) {
+					if verbint == 433 { // will reconnect
+						return
+					}
+					continue // need MODE to exit startup to exit startup
+				}
+			}
+
+			if irc.Verb != "" {
+				c.Log(fmt.Sprintf("< %v %s", c.count, read))
+			}
+
+			// Three non-int verbs matter during inital connection
+			switch irc.Verb {
+			case "PING", ":" + c.Host:
+				fmt.Println("PONGMF")
+				c.Writer <- strings.Replace(read, "PING", "PONG", -1)
+			case "NOTICE":
 				continue // need MODE to exit startup
-			}
-		}
-	}
-}
-
-// WaitFor a string or return most recent occurance
-func (c *Connection) WaitFor(grep []string, timelimit time.Duration) int {
-	t1 := time.Now()
-	defer green.Printf("WaitFor %q took %s\n", grep, time.Now().Sub(t1))
-	filter := make(chan int)
-
-	go func() {
-		var all []string
-		copy(all, c.netlog)
-		for i := len(all) - 1; i >= 0; i-- {
-			// Got new message
-			if len(c.netlog) != len(all) {
-				filter <- (-1)
-			}
-			for _, grepfor := range grep {
-				// Visit each backwards
-				if strings.Contains(all[i], grepfor) {
-					filter <- i
+			case "NICK":
+				if strings.Contains(irc.Message, c.Config.Master) {
+					c.WriteMaster(c.Config.CommandPrefix)
+				}
+			case "MODE": // got first MODE change. join channels and start ircb
+				go c.ircb()
+				go c.joinChannels()
+				c.Logf("startup took %s", time.Now().Sub(t1))
+				return
+			case "CAP":
+				if !c.Config.UseServices && irc.Message == "ACK :multi-prefix sasl" {
+					fmt.Println("AuthSasl2")
+					c.AuthSASL2()
+					continue // need MODE to exit startup
 				}
 			}
 		}
-
-	}()
-
-	// time limit
-	select {
-	case <-time.After(timelimit):
-		return -1
-	case line := <-filter:
-		if line == -1 {
-			return c.WaitFor(grep, timelimit)
-		}
-		return line
 	}
 
 }
 
 // Write a PRIVMSG to user or channel
 func (c *Connection) Write(channel, message string) {
-	if !strings.Contains(message, "\n") {
-		c.Writer <- fmt.Sprintf(`PRIVMSG %s :%s`, channel, message)
-	} else {
-		c.SlowSend(channel, message)
+	if message == "" {
+		return
 	}
+	if strings.Contains(message, "\n") {
+		c.SlowSend(channel, message)
+		return
+	}
+	c.Writer <- "PRIVMSG " + channel + " :" + message
 }
 
 // WriteMaster a PRIVMSG to c.Config.Master
 func (c *Connection) WriteMaster(message string) {
-	go func() { c.Write(c.Config.Master, message) }()
+	c.Write(c.Config.Master, message)
 }

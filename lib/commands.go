@@ -29,14 +29,30 @@ func init() {
 
 func dofortune(c *Connection, irc IRC) {
 	cmd := exec.Command("fortune", "-s")
-	b, err := cmd.Output()
+	b, err := cmd.CombinedOutput()
 	if err != nil {
 		c.WriteMaster(string(err.Error()))
 	}
 	c.SlowSend(irc.Channel, string(b))
 }
 
+func doexec(s string) func(c *Connection, irc IRC) {
+
+	return func(c *Connection, irc IRC) {
+		cmd := exec.Command("fortune", "-s")
+		b, err := cmd.CombinedOutput()
+		if err != nil {
+			c.WriteMaster(string(err.Error()))
+		}
+		c.SlowSend(irc.Channel, string(b))
+	}
+}
+
+// SlowSend sends every 800 millisecond
 func (c *Connection) SlowSend(channel string, message string) {
+	if message == "" {
+		return
+	}
 	split := strings.Split(message, "\n")
 	for i, line := range split {
 		line = strings.TrimSpace(line)
@@ -49,9 +65,10 @@ func (c *Connection) SlowSend(channel string, message string) {
 		if !strings.HasPrefix(channel, "#") {
 			c.Write(channel, randomcolor().Sprint(line))
 		} else {
+			c.Log("*")
 			c.Write(channel, line)
 		}
-		<-time.After(1000 * time.Millisecond)
+		<-time.After(500 * time.Millisecond)
 	}
 }
 
@@ -185,10 +202,13 @@ func (c *Connection) HandlePRIVMSG(irc IRC) bool {
 		return handled
 	default:
 		// started with command prefix, but not found in Command map or above cases.
-		if strings.Contains(irc.From, c.Config.Master) && getuser(irc.From) == c.Config.Master {
+		if irc.From == c.Config.Master {
 			c.HandleMasterCommand(irc)
 			return handled
 		}
+
+		c.Write(irc.From, red.Sprintf("i dont know the command %q in %q", irc.Command, irc.Message))
+
 	}
 	return false
 }
@@ -219,13 +239,15 @@ func registerCommands() map[string]func(c *Connection, irc IRC) {
 	commands["help"] = ListCommands
 
 	// ircb logo
-	commands["ircb"] = CommandSlowSay(logo)
+	commands["ircb"] = CommandSlowSay(logo + "\n" + version)
 
 	// beer me
 	commands["beer"] = CommandSayf("Have a beer, %s", "from")
 
 	// -=fortune
 	commands["fortune"] = dofortune
+	commands["tools"] = listTools
+	commands["tool"] = dotool
 	return commands
 }
 

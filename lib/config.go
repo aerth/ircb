@@ -41,6 +41,7 @@ type Config struct {
 	CommandPrefix string
 
 	Commands, MasterCommands map[string]func(c *Connection, irc IRC) `json:"-"`
+	Tools, MasterTools       map[string]string                       `json:"-"`
 }
 
 // Save config to ('.config') by default
@@ -77,21 +78,21 @@ func (c *Config) Save() error {
 	return nil
 }
 
-// Load config file
-func InitConfig(configLocation string, c *Config) (*Config, error) {
+// InitConfig returns an initialized config.
+func InitConfig(configLocation string, c ...*Config) (*Config, error) {
 	if c == nil {
-		c = new(Config)
+		c[0] = new(Config)
 		print("[config] init\n")
 	} else {
 		print("[config] load\n")
 	}
 
 	defer print("\n")
-	c.ConfigLocation = configLocation
-	b, err := ioutil.ReadFile(c.ConfigLocation)
+	c[0].ConfigLocation = configLocation
+	b, err := ioutil.ReadFile(c[0].ConfigLocation)
 	if err != nil {
 		if strings.Contains(err.Error(), "no such file") {
-			return c, nil
+			return c[0], nil
 		}
 		return nil, err
 	}
@@ -104,16 +105,16 @@ func InitConfig(configLocation string, c *Config) (*Config, error) {
 
 	// decode json
 	print(".")
-	err = json.Unmarshal(b, &c)
+	err = json.Unmarshal(b, &c[0])
 	if err != nil {
 		return nil, fmt.Errorf("[config] json error: %s", err)
 	}
 
 	print(".")
-	if c.AuthName == "" && c.Name != "" {
-		c.AuthName = c.Name
+	if c[0].AuthName == "" && c[0].Name != "" {
+		c[0].AuthName = c[0].Name
 	}
-	return c, nil
+	return c[0], nil
 }
 
 // Reload ('.config') in case it changed.
