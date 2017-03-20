@@ -1,0 +1,15 @@
+#!/bin/sh
+# -=tool spawn
+# spawns an instance of ircb
+if [ ! -f ircb.go ]; then
+echo "no ircb.go"
+echo "this is an ircb tool"
+echo "use by sending ircb: -=tool spawn"
+exit 0
+fi
+
+date
+echo "spawning a new instance of ircb"
+go run ircb.go &
+echo "spawned"
+exit 0
