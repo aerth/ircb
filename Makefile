@@ -40,7 +40,15 @@ install:
 	@echo 'PREFIX=${PREFIX}'
 
 	@mkdir -p ${PREFIX}
+	@mkdir -p ${PREFIX}/mtools
+	@mkdir -p ${PREFIX}/tools
+	
 	@mv ${NAME} ${PREFIX}/${NAME}
+
+	@echo installing tools:
+	cp -nvi mtools/* ${PREFIX}/mtools/
+	cp -nvi tools/* ${PREFIX}/tools/
+
 	@echo 'Successfully installed ${NAME} to ${PREFIX}'
 
 run:
