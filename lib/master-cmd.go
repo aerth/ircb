@@ -3,6 +3,7 @@ package ircb
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -137,11 +138,10 @@ func registerMasterCommands() map[string]func(c *Connection, irc IRC) {
 	masterCommands["u"] = func(c *Connection, irc IRC) {
 		t1 := time.Now()
 		c.WriteMaster("rebuilding @ " + t1.Format(time.Kitchen))
-		out, ok := spawn.Rebuild("", "upgrade.sh")
-		if !ok {
-			out, ok = spawn.Rebuild("", "make")
-		}
-		if ok {
+
+		cmd := exec.Command("upgrade.sh")
+		out, err := cmd.CombinedOutput()
+		if err == nil {
 			c.WriteMaster(green.Sprintf("brb (build took %s)", time.Now().Sub(t1).String()))
 			c.Log(out)
 			spawn.Spawn()
@@ -151,9 +151,9 @@ func registerMasterCommands() map[string]func(c *Connection, irc IRC) {
 			c.Log(out)
 			c.WriteMaster("no")
 			// short output | tail
-			lines := strings.Split(out, "\n")
+			lines := strings.Split(string(out), "\n")
 			if len(lines) < 5 {
-				c.WriteMaster(red.Sprint(out))
+				c.WriteMaster(red.Sprint(string(out)))
 			} else {
 				c.WriteMaster(red.Sprint(lines[len(lines)-5:]))
 			}
