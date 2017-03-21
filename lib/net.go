@@ -32,7 +32,7 @@ type Connection struct {
 	logfile             *os.File
 	conn                net.Conn
 	count               int
-	wait chan int
+	wait                chan int
 }
 
 // Connect returns a connection

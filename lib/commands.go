@@ -26,7 +26,6 @@ func dofortune(c *Connection, irc IRC) {
 	c.SlowSend(irc, string(b))
 }
 
-
 // SlowSend sends every 800 millisecond
 func (c *Connection) SlowSend(irc IRC, message string) {
 	if message == "" {

@@ -18,6 +18,7 @@ const (
 	// STOP is used to stop a channel
 	STOP = "STOP"
 )
+
 var boottime = time.Now()
 var commit string
 var version = "ircb v0.0.4 (https://github.com/aerth/ircb/)"
@@ -40,12 +41,13 @@ func (c *Connection) registercommands() {
 
 func (c *Connection) Wait(dur time.Duration) bool {
 	select {
-	case <- c.wait:
+	case <-c.wait:
 		return true
-	case <- time.After(dur):
+	case <-time.After(dur):
 		return false
 	}
 }
+
 // ircb logs net receives. responds to PING or handle parsed irc message
 func (c *Connection) ircb() {
 
@@ -53,9 +55,9 @@ func (c *Connection) ircb() {
 		c.Log(green.Sprint("[ircb] on"))
 		defer c.Log(green.Sprint("[ircb] off"))
 	}
-	go func(){
+	go func() {
 		c.wait <- 1
-		}()
+	}()
 	for {
 		select {
 		case <-time.After(30 * time.Second):

@@ -1,6 +1,7 @@
 package ircb
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -135,7 +136,7 @@ func registerMasterCommands() map[string]func(c *Connection, irc IRC) {
 	}
 	masterCommands["u"] = func(c *Connection, irc IRC) {
 		t1 := time.Now()
-		c.WriteMaster("rebuilding @ "+t1.Format(time.Kitchen))
+		c.WriteMaster("rebuilding @ " + t1.Format(time.Kitchen))
 		out, ok := spawn.Rebuild("", "upgrade.sh")
 		if !ok {
 			out, ok = spawn.Rebuild("", "make")
@@ -169,7 +170,7 @@ func registerMasterCommands() map[string]func(c *Connection, irc IRC) {
 	}
 	masterCommands["sayin"] = func(c *Connection, irc IRC) {
 		if len(irc.CommandArguments) > 2 {
-			c.Write(IRC{Channel:irc.CommandArguments[1]}, strings.Join(irc.CommandArguments[2:], " "))
+			c.Write(IRC{Channel: irc.CommandArguments[1]}, strings.Join(irc.CommandArguments[2:], " "))
 		} else {
 			c.WriteMaster("say what?")
 		}
