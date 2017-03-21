@@ -10,7 +10,7 @@ func dotool(c *Connection, irc IRC) {
 	n := len(irc.CommandArguments)
 
 	if n < 2 {
-		c.Write(irc.Channel, "need arg")
+		c.Write(irc, "need arg")
 		return
 	}
 
@@ -38,7 +38,7 @@ func dotool(c *Connection, irc IRC) {
 	c.Log(string(out))
 	c.WriteMaster(green.Sprint(string(out)))
 	if irc.From != c.Config.Master {
-		c.Write(irc.From, green.Sprint(string(out)))
+		c.Write(irc, green.Sprint(string(out)))
 	}
 
 }
@@ -47,7 +47,7 @@ func domtool(c *Connection, irc IRC) {
 
 	n := len(irc.CommandArguments)
 	if n < 2 {
-		c.Write(irc.Channel, "need arg")
+		c.Write(irc, "need arg")
 		return
 	}
 

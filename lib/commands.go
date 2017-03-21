@@ -12,20 +12,10 @@ import (
  * commands.go
  *
  * respond to commands
+ * new command functions look like this:
  *
+ * func (c *Connection, irc IRC){}
  */
-
-// c.Config.Commands map
-//var c.Config.Commands = map[string]func(c *Connection, irc IRC){}
-
-// Verbs can be map
-//var Verbs = map[string]func(c *Connection, read string){}
-
-var boottime = time.Now()
-
-func init() {
-
-}
 
 func dofortune(c *Connection, irc IRC) {
 	cmd := exec.Command("fortune", "-s")
@@ -33,23 +23,12 @@ func dofortune(c *Connection, irc IRC) {
 	if err != nil {
 		c.WriteMaster(string(err.Error()))
 	}
-	c.SlowSend(irc.Channel, string(b))
+	c.SlowSend(irc, string(b))
 }
 
-func doexec(s string) func(c *Connection, irc IRC) {
-
-	return func(c *Connection, irc IRC) {
-		cmd := exec.Command("fortune", "-s")
-		b, err := cmd.CombinedOutput()
-		if err != nil {
-			c.WriteMaster(string(err.Error()))
-		}
-		c.SlowSend(irc.Channel, string(b))
-	}
-}
 
 // SlowSend sends every 800 millisecond
-func (c *Connection) SlowSend(channel string, message string) {
+func (c *Connection) SlowSend(irc IRC, message string) {
 	if message == "" {
 		return
 	}
@@ -62,20 +41,19 @@ func (c *Connection) SlowSend(channel string, message string) {
 		if clean(line) == "" {
 			continue
 		}
-		if !strings.HasPrefix(channel, "#") {
-			c.Write(channel, randomcolor().Sprint(line))
+		if !strings.HasPrefix(irc.From, "#") {
+			c.Write(irc, randomcolor().Sprint(line))
 		} else {
-			c.Log("*")
-			c.Write(channel, line)
+			c.Write(irc, line)
 		}
 		<-time.After(500 * time.Millisecond)
 	}
 }
 
 // CommandSay returns command function that says s
-func CommandSay(s string) func(c *Connection, irc IRC) {
+func CommandSay(str string) func(c *Connection, irc IRC) {
 	return func(c *Connection, irc IRC) {
-		c.Write(irc.Channel, s)
+		c.Write(irc, str)
 	}
 }
 
@@ -97,18 +75,11 @@ func CommandSayf(s string, si ...string) func(c *Connection, irc IRC) {
 				i = append(i, v)
 			}
 		}
-		c.Write(irc.Channel, fmt.Sprintf(s, i...))
+		c.Write(irc, fmt.Sprintf(s, i...))
 	}
 }
 
-// CommandSay returns command function that says s
-func CommandSlowSay(s string) func(c *Connection, irc IRC) {
-	return func(c *Connection, irc IRC) {
-		c.SlowSend(irc.Channel, s)
-	}
-}
-
-// CommandDoreturns command function that sends raw s
+// CommandDo returns command function that sends raw s
 func CommandDo(s string) func(c *Connection, irc IRC) {
 	return func(c *Connection, irc IRC) {
 		c.Writer <- s
@@ -152,13 +123,12 @@ func (c *Connection) HandleVerbINT(verb int, irc IRC) (handled bool) {
 	case 433: // nick in use
 		go func() {
 			c.connected = false
-			c.Config.Password = "" // chances are...
+			c.Config.Password = "" // chances are, new user name is not registered
 			alert("Nick in use. Adding int and removing password.")
 			c.Config.Name = c.Config.Name + randstr()
 			<-time.After(1 * time.Second)
 			c.Reconnect()
 		}()
-
 	}
 	handled = true
 	return handled
@@ -175,30 +145,30 @@ func (c *Connection) HandlePRIVMSG(irc IRC) bool {
 
 	// cmd := strings.Split(irc.Message, " ")[0]
 	// cmd = strings.TrimSpace(cmd)
-	cmd := irc.Command
-	if cmd == "" {
+
+	if irc.Command == "" {
 		c.Log(red.Sprint("blank command\n"))
 		return handled
 	}
-	if c.Config.Commands[cmd] != nil {
+	if c.Config.Commands[irc.Command] != nil {
 		c.Log(orange.Sprint("Command map command"))
-		c.Config.Commands[cmd](c, irc)
+		c.Config.Commands[irc.Command](c, irc)
 		return true
 
 	}
-	if irc.From == c.Config.Master && c.Config.MasterCommands[cmd] != nil {
-		c.Config.MasterCommands[cmd](c, irc)
+	if irc.From == c.Config.Master && c.Config.MasterCommands[irc.Command] != nil {
+		c.Config.MasterCommands[irc.Command](c, irc)
 		return true
 	}
-	c.Log(blue.Sprintf("switch cmd: %q ", cmd))
-	switch cmd { // first word
+	c.Log(blue.Sprintf("switch irc.Command: %q ", irc.Command))
+	switch irc.Command { // first word
 	case "h", "help", "commands", "list":
 		if c.Config.Commands["help"] != nil {
 			c.Config.Commands["help"](c, irc)
 		}
 		return handled
 	case "about":
-		c.Write(irc.Channel, fmt.Sprintf("%s: ircb v%s source code at https://github.com/aerth/ircb", irc.From, c.Config.Version))
+		c.Write(irc, fmt.Sprintf("%s: ircb v%s source code at https://github.com/aerth/ircb", irc.From, c.Config.Version))
 		return handled
 	default:
 		// started with command prefix, but not found in Command map or above cases.
@@ -207,7 +177,7 @@ func (c *Connection) HandlePRIVMSG(irc IRC) bool {
 			return handled
 		}
 
-		c.Write(irc.From, red.Sprintf("i dont know the command %q in %q", irc.Command, irc.Message))
+		c.Write(irc, red.Sprintf("i dont know the command %q in %q", irc.Command, irc.Message))
 
 	}
 	return false
@@ -223,7 +193,7 @@ func registerCommands() map[string]func(c *Connection, irc IRC) {
 
 	// -=about
 	commands["about"] = func(c *Connection, irc IRC) {
-		c.Write(irc.Channel, "ircb v0.0.3 (https://github.com/aerth/ircb)")
+		c.Write(irc, "ircb v0.0.3 (https://github.com/aerth/ircb)")
 	}
 	// -=hello
 	commands["hello"] = CommandSayf("Hello, %s", "channel")
@@ -239,7 +209,7 @@ func registerCommands() map[string]func(c *Connection, irc IRC) {
 	commands["help"] = ListCommands
 
 	// ircb logo
-	commands["ircb"] = CommandSlowSay(logo + "\n" + version)
+	commands["ircb"] = CommandSay(logo + "\n" + version)
 
 	// beer me
 	commands["beer"] = CommandSayf("Have a beer, %s", "from")
@@ -253,9 +223,9 @@ func registerCommands() map[string]func(c *Connection, irc IRC) {
 
 // ListCommands for public
 func ListCommands(c *Connection, irc IRC) {
-	c.Write(irc.Channel, c.Config.ListCommands())
+	c.Write(irc, c.Config.ListCommands())
 }
 
 func douptime(c *Connection, irc IRC) {
-	c.Write(irc.Channel, "Uptime: "+time.Now().Sub(boottime).String())
+	c.Write(irc, "Uptime: "+time.Now().Sub(boottime).String())
 }

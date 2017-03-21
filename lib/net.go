@@ -32,11 +32,14 @@ type Connection struct {
 	logfile             *os.File
 	conn                net.Conn
 	count               int
+	wait chan int
 }
 
 // Connect returns a connection
 func (config *Config) Connect() *Connection {
-
+	if config.Dialer == nil {
+		config.NewDialer()
+	}
 	// some required fields
 	for key, v := range map[string]string{
 		"Master":        config.Master,
@@ -313,18 +316,18 @@ func (c *Connection) startup() {
 }
 
 // Write a PRIVMSG to user or channel
-func (c *Connection) Write(channel, message string) {
-	if message == "" {
+func (c *Connection) Write(irc IRC, message string) {
+	if clean(message) == "" {
 		return
 	}
 	if strings.Contains(message, "\n") {
-		c.SlowSend(channel, message)
+		c.SlowSend(irc, message)
 		return
 	}
-	c.Writer <- "PRIVMSG " + channel + " :" + message
+	c.Writer <- "PRIVMSG " + irc.Channel + " :" + message
 }
 
 // WriteMaster a PRIVMSG to c.Config.Master
 func (c *Connection) WriteMaster(message string) {
-	c.Write(c.Config.Master, message)
+	c.Write(IRC{Channel: c.Config.Master, From: c.Config.Master}, message)
 }

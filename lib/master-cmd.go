@@ -10,9 +10,13 @@ import (
 
 /*
  * ircb Copyright 2017  aerth <aerth@riseup.net>
- * commands.go
+ * master-cmd.go
  *
  * respond to privileged user commands
+ *
+ * new command functions look like this:
+ *
+ * func (c *Connection, irc IRC){}
  *
  */
 
@@ -23,7 +27,7 @@ func (c *Connection) HandleMasterCommand(irc IRC) (handled bool) {
 	}
 
 	if c.Config.MasterCommands == nil {
-		c.Write(irc.From, "no")
+		c.WriteMaster("no")
 		return false
 	}
 
@@ -49,7 +53,7 @@ func listMasterTools(c *Connection, irc IRC) {
 }
 
 func listTools(c *Connection, irc IRC) {
-	c.Write(irc.From, c.Config.ListTools())
+	c.Write(irc, c.Config.ListTools())
 }
 
 // list of built-in masterCommands
@@ -58,26 +62,29 @@ func registerMasterCommands() map[string]func(c *Connection, irc IRC) {
 
 	masterCommands["part"] = func(c *Connection, irc IRC) {
 		if len(irc.CommandArguments) > 1 {
-			c.Write(irc.Channel, "PART "+strings.Join(irc.CommandArguments[1:], " "))
 			c.Writer <- "PART " + strings.Join(irc.CommandArguments[1:], " ")
 		}
 	}
 	masterCommands["join"] = func(c *Connection, irc IRC) {
 		if len(irc.CommandArguments) > 1 {
-			c.Write(irc.Channel, "JOIN "+strings.Join(irc.CommandArguments[1:], " "))
 			c.Writer <- "JOIN " + strings.Join(irc.CommandArguments[1:], " ")
 		}
 	}
 
 	masterCommands["tell"] = func(c *Connection, irc IRC) {
 		if len(irc.CommandArguments) > 1 {
-			c.Write(irc.CommandArguments[1], strings.Join(irc.CommandArguments[2:], " "))
+			c.Write(IRC{From: irc.CommandArguments[1]}, strings.Join(irc.CommandArguments[2:], " "))
 		}
 	}
 
 	masterCommands["getenv"] = func(c *Connection, irc IRC) {
 		if len(irc.CommandArguments) == 2 {
-			c.Write(c.Config.Master, os.Getenv(irc.CommandArguments[1]))
+			c.WriteMaster(os.Getenv(irc.CommandArguments[1]))
+		}
+	}
+	masterCommands["env"] = func(c *Connection, irc IRC) {
+		if len(irc.CommandArguments) == 1 {
+			c.WriteMaster(fmt.Sprint(os.Environ()))
 		}
 	}
 	masterCommands["setenv"] = func(c *Connection, irc IRC) {
@@ -109,7 +116,7 @@ func registerMasterCommands() map[string]func(c *Connection, irc IRC) {
 			c.WriteMaster(err.Error())
 			return
 		}
-		c.Write(irc.Channel, "config saved")
+		c.WriteMaster("config saved")
 		return
 	}
 	masterCommands["reload-config"] = func(c *Connection, irc IRC) {
@@ -118,12 +125,9 @@ func registerMasterCommands() map[string]func(c *Connection, irc IRC) {
 			c.WriteMaster(err.Error())
 			return
 		}
-		c.Write(irc.Channel, "config reloaded. restart for changes to take effect.")
+		c.WriteMaster("config reloaded. restart for changes to take effect.")
 	}
 	masterCommands["r"] = func(c *Connection, irc IRC) {
-		for _, v := range c.Config.Channels {
-			c.Write(v, "brb")
-		}
 		c.WriteMaster("brb")
 		spawn.Spawn()
 		c.Stop("brb")
@@ -131,7 +135,7 @@ func registerMasterCommands() map[string]func(c *Connection, irc IRC) {
 	}
 	masterCommands["u"] = func(c *Connection, irc IRC) {
 		t1 := time.Now()
-		c.Write(irc.Channel, "rebuilding @ "+t1.Format(time.Kitchen))
+		c.WriteMaster("rebuilding @ "+t1.Format(time.Kitchen))
 		out, ok := spawn.Rebuild("", "upgrade.sh")
 		if !ok {
 			out, ok = spawn.Rebuild("", "make")
@@ -144,7 +148,7 @@ func registerMasterCommands() map[string]func(c *Connection, irc IRC) {
 
 		} else {
 			c.Log(out)
-			c.Write(irc.Channel, "no")
+			c.WriteMaster("no")
 			// short output | tail
 			lines := strings.Split(out, "\n")
 			if len(lines) < 5 {
@@ -157,30 +161,29 @@ func registerMasterCommands() map[string]func(c *Connection, irc IRC) {
 	}
 	masterCommands["say"] = func(c *Connection, irc IRC) {
 		if len(irc.CommandArguments) > 1 {
-			c.Write(irc.Channel, strings.Join(irc.CommandArguments[1:], " "))
+			c.Write(irc, strings.Join(irc.CommandArguments[1:], " "))
 		} else {
-			c.Write(irc.Channel, "say what?")
+			c.Write(irc, "say what?")
 		}
 		return
 	}
 	masterCommands["sayin"] = func(c *Connection, irc IRC) {
 		if len(irc.CommandArguments) > 2 {
-			c.Write(irc.CommandArguments[1], strings.Join(irc.CommandArguments[2:], " "))
+			c.Write(IRC{Channel:irc.CommandArguments[1]}, strings.Join(irc.CommandArguments[2:], " "))
 		} else {
-			c.Write(irc.Channel, "say what?")
+			c.WriteMaster("say what?")
 		}
 	}
 	masterCommands["owner"] = func(c *Connection, irc IRC) {
+		if len(irc.CommandArguments) < 2 {
+			c.WriteMaster(orange.Sprintf("all owners: %q\n",
+				c.Config.Owners))
+			return
+		}
 
-		if len(irc.CommandArguments) > 1 {
-			for i := 1; i < len(irc.CommandArguments)-1; i++ {
-				c.Config.owners[irc.CommandArguments[i]] = i
-				c.WriteMaster(orange.Sprintf("new owner: %q\n", irc.CommandArguments[i]))
-			}
-		} else {
-			c.WriteMaster(green.Sprint(len(irc.CommandArguments)))
-			c.WriteMaster(orange.Sprintf("all owners: %q\n", c.Config.Owners))
-
+		for i := 1; i < len(irc.CommandArguments)-1; i++ {
+			c.Config.owners[irc.CommandArguments[i]] = i
+			c.WriteMaster(orange.Sprintf("new owner: %q\n", irc.CommandArguments[i]))
 		}
 
 		c.Config.Owners = ""

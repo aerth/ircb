@@ -80,8 +80,8 @@ func (c *Config) Save() error {
 
 // InitConfig returns an initialized config.
 func InitConfig(configLocation string, c ...*Config) (*Config, error) {
-	if c == nil {
-		c[0] = new(Config)
+	if len(c) == 0 || c[0] == nil {
+		c = []*Config{new(Config)}
 		print("[config] init\n")
 	} else {
 		print("[config] load\n")
