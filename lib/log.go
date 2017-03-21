@@ -21,6 +21,7 @@ import (
  * filters and colorizes stderr output
  *
  */
+func init() { color.NoColor = false }
 
 var green = color.New(color.FgGreen)
 var red = color.New(color.FgRed)
