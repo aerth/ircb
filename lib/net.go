@@ -320,6 +320,9 @@ func (c *Connection) Write(irc IRC, message string) {
 	if clean(message) == "" {
 		return
 	}
+	if irc.Channel == "" && irc.From != "" {
+		irc.Channel = irc.From
+	}
 	if strings.Contains(message, "\n") {
 		c.SlowSend(irc, message)
 		return
