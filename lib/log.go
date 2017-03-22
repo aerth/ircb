@@ -101,7 +101,7 @@ func (c *Connection) Logf(f string, i ...interface{}) {
 }
 
 func (c *Connection) logcat() string {
-	b, err := ioutil.ReadAll(c.logfile.Name())
+	b, err := ioutil.ReadAll(c.logfile)
 	if err != nil {
 		return err.Error()
 	}
