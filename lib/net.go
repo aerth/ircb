@@ -323,10 +323,20 @@ func (c *Connection) Write(irc IRC, message string) {
 	if irc.Channel == "" && irc.From != "" {
 		irc.Channel = irc.From
 	}
+
 	if strings.Contains(message, "\n") {
 		c.SlowSend(irc, message)
 		return
 	}
+
+	if len([]byte(message)) > 512 {
+		shorts := strings.SplitN(message, "", 512)
+		for _, short := range shorts {
+		c.Writer <- "PRIVMSG " + irc.Channel + " :" + short
+		}
+		return
+	}
+
 	c.Writer <- "PRIVMSG " + irc.Channel + " :" + message
 }
 

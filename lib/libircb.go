@@ -96,7 +96,9 @@ func (c *Connection) netWriter() {
 			if out == STOP {
 				return
 			}
-
+			if len([]byte(out)) > 512 {
+				c.Log(red.Sprint("Write will be truncated"))
+			}
 			// Write to connection
 			_, err := c.conn.Write([]byte(fmt.Sprintf("%s\r\n", out)))
 			if err != nil {
