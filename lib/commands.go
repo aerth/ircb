@@ -40,14 +40,16 @@ func (c *Connection) SlowSend(irc IRC, message string) {
 		if clean(line) == "" {
 			continue
 		}
-		if !strings.HasPrefix(irc.From, "#") {
-			c.Write(irc, randomcolor().Sprint(line))
-		} else {
-			c.Write(irc, line)
+
+		if irc.From == "" {
+			irc.From = irc.Channel
+
 		}
+		c.Writer <- "PRIVMSG "+irc.From+" :" +line
+	}
 		<-time.After(500 * time.Millisecond)
 	}
-}
+
 
 // CommandSay returns command function that says s
 func CommandSay(str string) func(c *Connection, irc IRC) {
