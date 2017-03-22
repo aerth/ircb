@@ -89,6 +89,17 @@ func registerMasterCommands() map[string]func(c *Connection, irc IRC) {
 			c.WriteMaster(fmt.Sprint(os.Environ()))
 		}
 	}
+
+	masterCommands["logcat"] = func(c *Connection, irc IRC) {
+		lines := strings.Split(c.logcat(), "\n")
+		c.WriteMaster(green.Sprintf("Lines: %v", len(lines)))
+		if len(lines) < 10 {
+			c.WriteMaster(strings.Join(lines, "\n"))
+			return
+		}
+
+		c.WriteMaster(strings.Join(lines[len(lines)-9:], "\n"))
+	}
 	masterCommands["setenv"] = func(c *Connection, irc IRC) {
 		if len(irc.CommandArguments) > 2 {
 			os.Setenv(irc.CommandArguments[1], (irc.CommandArguments[2]))

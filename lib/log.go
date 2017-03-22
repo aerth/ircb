@@ -100,6 +100,15 @@ func (c *Connection) Logf(f string, i ...interface{}) {
 	c.logfile.WriteString(fmt.Sprintf(f, i...))
 }
 
+func (c *Connection) logcat() string {
+	b, err := ioutil.ReadAll(c.logfile.Name())
+	if err != nil {
+		return err.Error()
+	}
+	return string(b)
+}
+
+
 func (c *Connection) openlogfile() {
 	var err error
 	os.Mkdir("logs", 0750)
