@@ -103,6 +103,8 @@ func (c *Connection) netWriter() {
 				fmt.Fprintln(os.Stderr, err)
 				return
 			}
+
+			<- time.After(500*time.Millisecond)
 		}
 	}()
 

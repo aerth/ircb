@@ -45,7 +45,11 @@ func (c *Connection) SlowSend(irc IRC, message string) {
 			irc.From = irc.Channel
 		}
 
-		c.Writer <- "PRIVMSG "+irc.From+" :" +rnbo(line)
+		if len(split) > 3 {
+			c.Writer <- "PRIVMSG "+irc.From+" :" +randomcolor().Sprint(line)
+		} else {
+			c.Writer <- "PRIVMSG "+irc.Channel+" :" +line
+		}
 	}
 		<-time.After(500 * time.Millisecond)
 	}
