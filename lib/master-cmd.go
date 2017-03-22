@@ -153,7 +153,7 @@ func registerMasterCommands() map[string]func(c *Connection, irc IRC) {
 		t1 := time.Now()
 		c.WriteMaster("rebuilding @ " + t1.Format(time.Kitchen))
 
-		cmd := exec.Command("upgrade.sh")
+		cmd := exec.Command("sh", "./upgrade.sh")
 		out, err := cmd.CombinedOutput()
 		if err == nil {
 			c.WriteMaster(green.Sprintf("brb (build took %s)", time.Now().Sub(t1).String()))
@@ -162,16 +162,10 @@ func registerMasterCommands() map[string]func(c *Connection, irc IRC) {
 			c.Stop("brb")
 
 		} else {
-			c.Log(out)
+			c.Log(string(out))
 			c.WriteMaster("no")
-			// short output | tail
-			lines := strings.Split(string(out), "\n")
-			if len(lines) < 5 {
-				c.WriteMaster(red.Sprint(string(out)))
-			} else {
-				c.WriteMaster(red.Sprint(lines[len(lines)-5:]))
+			c.WriteMaster(string(out))
 			}
-		}
 		return
 	}
 	masterCommands["say"] = func(c *Connection, irc IRC) {
