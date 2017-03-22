@@ -21,7 +21,7 @@ const (
 
 var boottime = time.Now()
 var commit string
-var version = "ircb v0.0.4 (https://github.com/aerth/ircb/)"
+var version = "ircb v0.0.4 https://github.com/aerth/ircb "
 var versionstring = version + "-" + commit
 
 func (c *Connection) registercommands() {
@@ -154,7 +154,7 @@ func (c *Connection) initialConnect() {
 // joinChannels joins config channels and sends bot master the command prefix
 func (c *Connection) joinChannels() {
 	// msg master
-	c.WriteMaster(rnbo(logo))
+	c.WriteMaster(logo)
 	c.WriteMaster(rnbo(version))
 	c.WriteMaster("Prefix commands with \"" + green.Sprint(c.Config.CommandPrefix) + "\"")
 	c.WriteMaster(orange.Sprintf("Joining channels: %q", c.Config.Channels))

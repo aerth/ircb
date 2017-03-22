@@ -43,9 +43,9 @@ func (c *Connection) SlowSend(irc IRC, message string) {
 
 		if irc.From == "" {
 			irc.From = irc.Channel
-
 		}
-		c.Writer <- "PRIVMSG "+irc.From+" :" +line
+
+		c.Writer <- "PRIVMSG "+irc.From+" :" +rnbo(line)
 	}
 		<-time.After(500 * time.Millisecond)
 	}

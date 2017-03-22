@@ -143,9 +143,9 @@ func (config *Config) String() string {
 // ListCommands string
 func (config *Config) ListCommands() string {
 	var commands string
-	commands += fmt.Sprintf("Total: %v\n", len(config.Commands))
+	commands += fmt.Sprintf("Total: %v\nCommands: ", len(config.Commands))
 	for key := range config.Commands {
-		commands += fmt.Sprintf("Command: %s\n", key)
+		commands += fmt.Sprintf("%s ", key)
 	}
 	return commands
 }
@@ -153,9 +153,9 @@ func (config *Config) ListCommands() string {
 // ListMasterCommands returns a string
 func (config *Config) ListMasterCommands() string {
 	var commands string
-	commands += fmt.Sprintf("*Total: %v\n", len(config.MasterCommands))
+	commands += fmt.Sprintf("*Total: %v\n*Commands: ", len(config.MasterCommands))
 	for key := range config.MasterCommands {
-		commands += fmt.Sprintf("*Command: %s\n", key)
+		commands += fmt.Sprintf("%s ", key)
 	}
 	return commands
 }
@@ -163,9 +163,9 @@ func (config *Config) ListMasterCommands() string {
 // ListMasterTools returns a list of tools in the tool dir
 func (config *Config) ListMasterTools() string {
 	var tools string
-	tools += fmt.Sprintf("*Tools: %v\n", len(config.MasterTools))
+	tools += fmt.Sprintf("*Total: %v\nTools:", len(config.MasterTools))
 	for tool := range config.MasterTools {
-		tools += fmt.Sprintf("*Tool: %s\n", tool)
+		tools += fmt.Sprintf("%s ", tool)
 	}
 	return tools
 }
@@ -173,9 +173,9 @@ func (config *Config) ListMasterTools() string {
 // ListTools returns a list of tools in the tool dir
 func (config *Config) ListTools() string {
 	var tools string
-	tools += fmt.Sprintf("*Tools: %v\n", len(config.Tools))
+	tools += fmt.Sprintf("*Total: %v\nTools: ", len(config.Tools))
 	for tool := range config.Tools {
-		tools += fmt.Sprintf("*Tool: %s\n", tool)
+		tools += fmt.Sprintf("%s ", tool)
 	}
 	return tools
 }
