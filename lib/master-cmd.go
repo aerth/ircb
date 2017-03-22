@@ -100,6 +100,9 @@ func registerMasterCommands() map[string]func(c *Connection, irc IRC) {
 
 		c.WriteMaster(strings.Join(lines[len(lines)-9:], "\n"))
 	}
+	masterCommands["logname"] = func(c *Connection, irc IRC) {
+		c.WriteMaster(c.logfile.Name())
+	}
 	masterCommands["setenv"] = func(c *Connection, irc IRC) {
 		if len(irc.CommandArguments) > 2 {
 			os.Setenv(irc.CommandArguments[1], (irc.CommandArguments[2]))
