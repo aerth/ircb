@@ -52,6 +52,8 @@ var (
 )
 
 var built = "go get -v github.com/aerth/ircb/cmd/ircb"
+
+// colors are only for logs
 var green = color.New(color.FgGreen)
 var red = color.New(color.FgRed)
 var orange = color.New(color.FgRed)
@@ -87,7 +89,8 @@ func DoConnect(config *ircb.Config) {
 
 	// catch signals
 	sigch := make(chan os.Signal, 1)
-	signal.Notify(sigch, os.Interrupt)
+	signal.Notify(sigch) // all signals
+
 	go func() {
 		for sign := range sigch {
 			fmt.Fprintln(os.Stderr, "ircb got", sign.String())

@@ -21,7 +21,7 @@ import (
  * filters and colorizes stderr output
  *
  */
-func init() { color.NoColor = false }
+func init() { color.NoColor = true }
 
 var green = color.New(color.FgGreen)
 var red = color.New(color.FgRed)
@@ -107,7 +107,6 @@ func (c *Connection) logcat() string {
 	}
 	return string(b)
 }
-
 
 func (c *Connection) openlogfile() {
 	var err error

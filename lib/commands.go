@@ -46,14 +46,13 @@ func (c *Connection) SlowSend(irc IRC, message string) {
 		}
 
 		if len(split) > 3 {
-			c.Writer <- "PRIVMSG "+irc.From+" :" +randomcolor().Sprint(line)
+			c.Writer <- "PRIVMSG " + irc.From + " :" + randomcolor().Sprint(line)
 		} else {
-			c.Writer <- "PRIVMSG "+irc.Channel+" :" +line
+			c.Writer <- "PRIVMSG " + irc.Channel + " :" + line
 		}
 	}
-		<-time.After(500 * time.Millisecond)
-	}
-
+	<-time.After(500 * time.Millisecond)
+}
 
 // CommandSay returns command function that says s
 func CommandSay(str string) func(c *Connection, irc IRC) {

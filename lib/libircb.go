@@ -106,7 +106,7 @@ func (c *Connection) netWriter() {
 				return
 			}
 
-			<- time.After(500*time.Millisecond)
+			<-time.After(500 * time.Millisecond)
 		}
 	}()
 

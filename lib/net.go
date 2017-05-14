@@ -332,7 +332,7 @@ func (c *Connection) Write(irc IRC, message string) {
 	if len([]byte(message)) > 512 {
 		shorts := strings.SplitN(message, "", 512)
 		for _, short := range shorts {
-		c.Writer <- "PRIVMSG " + irc.Channel + " :" + short
+			c.Writer <- "PRIVMSG " + irc.Channel + " :" + short
 		}
 		return
 	}

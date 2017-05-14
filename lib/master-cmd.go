@@ -165,7 +165,7 @@ func registerMasterCommands() map[string]func(c *Connection, irc IRC) {
 			c.Log(string(out))
 			c.WriteMaster("no")
 			c.WriteMaster(string(out))
-			}
+		}
 		return
 	}
 	masterCommands["say"] = func(c *Connection, irc IRC) {
