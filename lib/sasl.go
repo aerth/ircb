@@ -19,6 +19,15 @@ func (c *Connection) AuthSASL1() {
 	}
 }
 
+func (c *Connection) Mode(flags string) {
+	if flags == "" || c.Config.Name == "" {
+		c.Log("bad MODE flags")
+		return
+	}
+
+	c.Writer <- fmt.Sprintf("MODE %s %s", c.Config.Name, flags)
+}
+
 // AuthSASL2 Stage 2: send credentials
 func (c *Connection) AuthSASL2() {
 	if c.Config.Verbose {

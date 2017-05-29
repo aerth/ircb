@@ -247,6 +247,7 @@ func (c *Connection) startup() {
 	if c.Config.Password != "" && c.Config.UseServices {
 		c.AuthServices()
 	}
+	c.Mode("+i")
 	c.Log(fmt.Sprintf("< %v %s", c.count, read))
 	c.Host = strings.TrimPrefix(strings.Split(read, " ")[0], ":")
 	c.Log(rnbo(":) connected to " + c.Host))
@@ -289,6 +290,7 @@ func (c *Connection) startup() {
 
 			// Three non-int verbs matter during inital connection
 			switch irc.Verb {
+
 			case "PING", ":" + c.Host:
 				fmt.Println("PONGMF")
 				c.Writer <- strings.Replace(read, "PING", "PONG", -1)
@@ -298,7 +300,7 @@ func (c *Connection) startup() {
 				if strings.Contains(irc.Message, c.Config.Master) {
 					c.WriteMaster(c.Config.CommandPrefix)
 				}
-			case "MODE": // got first MODE change. join channels and start ircb
+			case "MODE", "PONG": // got first MODE change. join channels and start ircb
 				go c.ircb()
 				go c.joinChannels()
 				c.Logf("startup took %s", time.Now().Sub(t1))
