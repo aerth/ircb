@@ -8,8 +8,9 @@ import (
 type Config struct {
 	Host          string // in the form 'host:port'
 	Nick          string
-	Master        string
+	Master        string // in the form 'master:prefix'
 	CommandPrefix string
+	Channels      string // comma separated channels to autojoin
 	UseSSL        bool
 	InvalidSSL    bool
 	EnableTools   bool
@@ -27,6 +28,7 @@ func NewDefaultConfig() *Config {
 	config.Nick = "mustangsally"
 	config.Master = "aerth"
 	config.CommandPrefix = "!"
+	config.Channels = "##ircb"
 	config.UseSSL = false
 	config.InvalidSSL = false
 	config.EnableTools = true
@@ -36,9 +38,13 @@ func NewDefaultConfig() *Config {
 	return config
 }
 
+func (c *Connection) MarshalConfig() ([]byte, error) {
+	return c.config.Marshal()
+}
+
 // Marshal into json encoded bytes from config values
 func (c Config) Marshal() ([]byte, error) {
-	return json.Marshal(c)
+	return json.MarshalIndent(c, " ", " ")
 }
 
 // ConfigFromJSON loads a new config from json encoded bytes.

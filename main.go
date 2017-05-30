@@ -1,9 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
+	"io/ioutil"
 	"log"
 	"os"
+	"strings"
 
 	ircb "github.com/aerth/ircb/lib"
 )
@@ -27,12 +30,36 @@ var (
 
 func main() {
 	flag.Parse()
+
+LoadConfig:
 	config := buildconfig()
+	if b, err := ioutil.ReadFile("config.json"); err == nil {
+		if len(b) != 0 {
+			err = json.Unmarshal(b, &config)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+	} else if strings.Contains(err.Error(), "no such") {
+		_, err = os.Create("config.json")
+		if err != nil {
+			log.Println("cant create config.json:", err)
+		} else {
+			goto LoadConfig
+		}
+	}
 	conn, err := config.NewConnection()
 	if err != nil {
 		log.Fatal(err)
 	}
 	conn.Wait()
+	if b, err := conn.MarshalConfig(); err == nil {
+		err := ioutil.WriteFile("config.json", b, 0700)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
 }
 
 func buildconfig() *ircb.Config {

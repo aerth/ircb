@@ -17,7 +17,8 @@ func HandleVerbINT(c *Connection, irc *IRC) {
 	switch verb {
 	default: // unknown numerical verb
 		c.Log.Printf("new verb: %q", irc.Verb)
-
+	case 433:
+		c.Close()
 	}
 }
 func HandleMasterVerb(c *Connection, irc *IRC) bool {
@@ -70,6 +71,16 @@ func HandleVerb(c *Connection, irc *IRC) {
 		c.Log.Printf("new verb: %q", irc.Verb)
 	case "MODE":
 		c.Log.Printf("got mode: %q", irc.Message)
+		if !c.joined {
+			for _, ch := range strings.Split(c.config.Channels, ",") {
+				if ch != "" {
+					c.Log.Println("Joining channel:", ch)
+					c.Write([]byte(fmt.Sprintf("JOIN %s", ch)))
+				}
+			}
+			c.joined = true
+
+		}
 	case "PRIVMSG":
 		if strings.Count(irc.Message, " ") == 0 && strings.HasPrefix(irc.To, "#") {
 			err := c.ParseKarma(irc.Message)
@@ -108,18 +119,11 @@ func DefaultCommandMap() map[string]Command {
 
 func DefaultMasterMap() map[string]Command {
 	m := make(map[string]Command)
-	m["up"] = CommandUptime
-	m["uptime"] = CommandHostUptime
-	m["help"] = CommandHelp
-	m["about"] = CommandAbout
-	m["lines"] = CommandLineCount
-	m["line"] = CommandLine
-	m["history"] = CommandHistorySearch
 	m["do"] = CommandMasterDo
-	m["voice"] = CommandMasterVoice
-	m["reload"] = CommandMasterReload
-	m["macro"] = CommandMasterMacro
-	m["echo"] = CommandEcho
+	m["upgrade"] = CommandMasterUpgrade
+	//	m["voice"] = CommandMasterVoice
+	//	m["reload"] = CommandMasterReload
+	//	m["macro"] = CommandMasterMacro
 	return m
 }
 
@@ -155,5 +159,28 @@ func CommandMasterVoice(c *Connection, irc *IRC) {}
 func CommandMasterDebug(c *Connection, irc *IRC) {
 	c.Log.Println(c, irc)
 }
-func CommandMasterMacro(c *Connection, irc *IRC)  {}
 func CommandMasterReload(c *Connection, irc *IRC) {}
+func CommandMasterUpgrade(c *Connection, irc *IRC) {
+	update := exec.Command("git", "pull", "origin", "lite")
+
+	out, err := update.CombinedOutput()
+	c.Log.Println(string(out))
+	if err != nil {
+		c.Log.Println(irc, err)
+		return
+	}
+	upgrade := exec.Command("go", "build")
+
+	out, err = upgrade.CombinedOutput()
+	c.Log.Println(string(out))
+	if err != nil {
+		c.Log.Println(irc, err)
+		return
+	}
+	c.Respawn()
+
+}
+func CommandMasterMacro(c *Connection, irc *IRC) {}
+func CommandMasterQuit(c *Connection, irc *IRC) {
+	c.Close()
+}

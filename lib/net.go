@@ -32,6 +32,7 @@ type Connection struct {
 	mastermap   map[string]Command
 	karma       map[string]int // map[nick]level
 	karmalock   sync.Mutex
+	joined      bool
 }
 
 func (config *Config) NewConnection() (*Connection, error) {
@@ -84,12 +85,13 @@ func (c *Connection) Close() error {
 	if err != nil {
 		return err
 	}
+	c.done <- 0
 	return c.conn.Close()
 }
 
 // Write to irc connection, adding '\r\n'
 func (c *Connection) Write(b []byte) (n int, err error) {
-	if len(b) < 4 {
+	if strings.TrimSpace(string(b)) == "" || len(b) < 4 {
 		return 0, fmt.Errorf("write too small")
 	}
 	if string(b[len(b)-2:]) != "\r\n" {
@@ -111,7 +113,6 @@ func (c *Connection) Send(irc IRC) {
 		c.Log.Println(err)
 	}
 }
-
 func (c *Connection) Wait() {
 	<-c.done
 }
