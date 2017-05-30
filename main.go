@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"log"
+	"os"
 
 	ircb "github.com/aerth/ircb/lib"
 )
@@ -10,7 +11,7 @@ import (
 var (
 	flaghost           = flag.String("h", "localhost:6667", "host (in the format 'host:port')")
 	flagnick           = flag.String("n", "mustangsally", "nick")
-	flagmaster         = flag.String("m", "aerth:/", "master:commandprefix")
+	flagmaster         = flag.String("m", "root:@", "master:commandprefix")
 	flagcommandprefix  = flag.String("c", "!", "public command prefix")
 	flagssl            = flag.Bool("ssl", false, "use ssl to connect")
 	flaginvalidssl     = flag.Bool("x", false, "accept invalid tls certificates")
@@ -42,5 +43,17 @@ func buildconfig() *ircb.Config {
 	config.EnableKarma = (*flagdisablekarma == false)
 	config.EnableHistory = (*flagdisablehistory == false)
 	config.EnableMacros = (*flagdisablemacros == false)
+
+	if master := os.Getenv("MASTER"); master != "" {
+		config.Master = master
+	}
+	if addr := os.Getenv("ADDR"); addr != "" {
+		config.Host = addr
+	}
+
+	if nick := os.Getenv("NICK"); nick != "" {
+		config.Nick = nick
+	}
+
 	return config
 }

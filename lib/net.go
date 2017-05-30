@@ -28,6 +28,7 @@ type Connection struct {
 	writer      *bufio.Writer
 	done        chan int
 	commandmap  map[string]Command
+	mastermap   map[string]Command
 }
 
 func (config *Config) NewConnection() (*Connection, error) {
@@ -55,7 +56,7 @@ func (config *Config) NewConnection() (*Connection, error) {
 	}
 
 	c.commandmap = DefaultCommandMap()
-
+	c.mastermap = DefaultMasterMap()
 	// dial direct
 	c.conn, err = net.Dial("tcp", c.config.Host)
 	if err != nil {
@@ -85,6 +86,7 @@ func (c *Connection) Write(b []byte) (n int, err error) {
 	if string(b[len(b)-2:]) != "\r\n" {
 		b = append(b, "\r\n"...)
 	}
+	c.Log.Println("SEND", string(b))
 	return c.conn.Write(b)
 }
 
@@ -159,6 +161,11 @@ func (c *Connection) readerwriter() {
 			continue
 		}
 
+		c.Log.Printf("Comparing %q with %q", irc.ReplyTo, strings.Split(c.config.Master, ":")[0])
+		if irc.ReplyTo == strings.Split(c.config.Master, ":")[0] {
+			HandleMasterVerb(c, irc)
+			continue
+		}
 		HandleVerb(c, irc)
 	}
 }
