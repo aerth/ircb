@@ -20,7 +20,9 @@ func HandleVerbINT(c *Connection, irc *IRC) {
 
 	}
 }
-func HandleMasterVerb(c *Connection, irc *IRC) {
+func HandleMasterVerb(c *Connection, irc *IRC) bool {
+	const handled = true
+	const nothandled = false
 	defer c.Log.Println("Got master command:", irc)
 	switch irc.Verb {
 	default:
@@ -28,22 +30,22 @@ func HandleMasterVerb(c *Connection, irc *IRC) {
 	case "PRIVMSG":
 		if irc.ReplyTo != strings.Split(c.config.Master, ":")[0] {
 			c.Log.Printf("not master:", irc.ReplyTo)
-			return
+			return nothandled
 		}
 		i := strings.Index(c.config.Master, ":")
 
 		if i == -1 {
 			c.Log.Println("bad config, not semicolon in Master field")
-			return
+			return nothandled
 		}
 		if i >= len(c.config.Master) {
 			c.Log.Println("bad config, bad semicolon in Master field")
-			return
+			return nothandled
 		}
 		mp := c.config.Master[i+1:]
 		if !strings.HasPrefix(irc.Message, mp) {
 			c.Log.Println("bad master prefix:", irc.Message)
-			return
+			return nothandled
 		}
 		irc.Message = strings.TrimPrefix(irc.Message, mp)
 		irc.Command = strings.Split(irc.Message, " ")[0]
@@ -53,12 +55,14 @@ func HandleMasterVerb(c *Connection, irc *IRC) {
 			if fn, ok := c.mastermap[irc.Command]; ok {
 				c.Log.Printf("master command found: %q", irc.Command)
 				fn(c, irc)
-				return
+				return handled
 			}
 		}
 		c.Log.Printf("master command not found: %q", irc.Command)
+		return nothandled
 
 	}
+	return nothandled
 }
 func HandleVerb(c *Connection, irc *IRC) {
 	switch irc.Verb {
@@ -67,6 +71,13 @@ func HandleVerb(c *Connection, irc *IRC) {
 	case "MODE":
 		c.Log.Printf("got mode: %q", irc.Message)
 	case "PRIVMSG":
+		if strings.Count(irc.Message, " ") == 0 && strings.HasPrefix(irc.To, "#") {
+			err := c.ParseKarma(irc.Message)
+			if err == nil {
+				return
+			}
+			c.Log.Println(err) // continue maybe is command?
+		}
 		if irc.Command != "" {
 			if fn, ok := c.commandmap[irc.Command]; ok {
 				c.Log.Printf("command found: %q", irc.Command)
@@ -91,6 +102,7 @@ func DefaultCommandMap() map[string]Command {
 	m["line"] = CommandLine
 	m["history"] = CommandHistorySearch
 	m["echo"] = CommandEcho
+	m["karma"] = KarmaShow
 	return m
 }
 

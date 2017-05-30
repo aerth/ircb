@@ -8,6 +8,10 @@ import (
 	ircb "github.com/aerth/ircb/lib"
 )
 
+func init() {
+	log.SetFlags(log.Lshortfile)
+}
+
 var (
 	flaghost           = flag.String("h", "localhost:6667", "host (in the format 'host:port')")
 	flagnick           = flag.String("n", "mustangsally", "nick")
