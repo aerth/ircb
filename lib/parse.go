@@ -29,6 +29,9 @@ func (irc *IRC) Reply(c *Connection, s string) {
 		To:      irc.ReplyTo,
 		Message: s,
 	}
+	if strings.HasPrefix(irc.To, "#") {
+		reply.To = irc.To
+	}
 	c.Send(reply)
 }
 
