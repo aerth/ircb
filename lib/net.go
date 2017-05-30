@@ -83,6 +83,9 @@ func (c *Connection) Close() error {
 
 // Write to irc connection, adding '\r\n'
 func (c *Connection) Write(b []byte) (n int, err error) {
+	if len(b) < 4 {
+		return 0, fmt.Errorf("write too small")
+	}
 	if string(b[len(b)-2:]) != "\r\n" {
 		b = append(b, "\r\n"...)
 	}
