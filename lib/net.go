@@ -2,7 +2,6 @@ package ircb
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
 	"io"
 	"log"
@@ -26,15 +25,16 @@ type Connection struct {
 	lines       int
 	historyfile *os.File
 	karmafile   *os.File
-	buf         *bytes.Buffer
 	reader      *bufio.Reader
 	writer      *bufio.Writer
 	done        chan int
+	definitions map[string]string
 	commandmap  map[string]Command
 	mastermap   map[string]Command
 	karma       map[string]int // map[nick]level
 	karmalock   sync.Mutex
 	joined      bool
+	quiet       bool
 }
 
 func (config *Config) NewConnection() (*Connection, error) {
@@ -45,18 +45,24 @@ func (config *Config) NewConnection() (*Connection, error) {
 	if config.KarmaFile == "" {
 		config.KarmaFile = "karma.db"
 	}
+	if config.DictionaryFile == "" {
+		config.DictionaryFile = "dictionary.db"
+	}
 	c := new(Connection)
 	c.Log = log.New(os.Stderr, "", log.Lshortfile)
 	c.config = config
 	c.since = time.Now()
 	c.lines = 0
-	c.buf = new(bytes.Buffer)
 	c.done = make(chan int)
 	c.historyfile, err = os.OpenFile(config.HistoryFile, os.O_CREATE|os.O_RDWR, 0700)
 	if err != nil {
 		return c, err
 	}
 	c.karmafile, err = os.OpenFile(config.KarmaFile, os.O_CREATE|os.O_RDWR, 0700)
+	if err != nil {
+		return c, err
+	}
+	c.definitions, err = LoadDefinitions(config.DictionaryFile)
 	if err != nil {
 		return c, err
 	}

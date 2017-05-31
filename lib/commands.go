@@ -6,8 +6,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/kr/pretty"
 )
 
 type Command func(c *Connection, irc *IRC)
@@ -44,7 +42,6 @@ func HandleMasterVerb(c *Connection, irc *IRC) bool {
 		}
 		mp := c.config.Master[i+1:]
 		if !strings.HasPrefix(irc.Message, mp) {
-			c.Log.Println("bad master prefix:", irc.Message)
 			return nothandled
 		}
 		irc.Message = strings.TrimPrefix(irc.Message, mp)
@@ -96,17 +93,20 @@ func HandleVerb(c *Connection, irc *IRC) {
 			}
 			c.Log.Printf("command not found: %q", irc.Command)
 		}
+
+		// try to parse http link title
 		if strings.Contains(irc.Message, "http") {
-			c.Log.Println("trying http!")
-			c.HandleLinks(irc)
+			go c.HandleLinks(irc)
+		}
+
+		if definition, ok := c.definitions[irc.Command]; ok {
+			irc.Reply(c, definition)
 			return
 		}
+
 	}
 }
 
-func (irc IRC) String() string {
-	return pretty.Sprint(irc)
-}
 func DefaultCommandMap() map[string]Command {
 	m := make(map[string]Command)
 	m["up"] = CommandUptime
@@ -118,6 +118,7 @@ func DefaultCommandMap() map[string]Command {
 	m["history"] = CommandHistorySearch
 	m["echo"] = CommandEcho
 	m["karma"] = KarmaShow
+	m["define"] = CommandDefine
 	return m
 }
 
@@ -150,9 +151,33 @@ func CommandHostUptime(c *Connection, irc *IRC) {
 func CommandEcho(c *Connection, irc *IRC) {
 	irc.Reply(c, fmt.Sprint(irc.Arguments))
 }
-func CommandHelp(c *Connection, irc *IRC)          {}
-func CommandAbout(c *Connection, irc *IRC)         {}
-func CommandLineCount(c *Connection, irc *IRC)     {}
+func CommandQuiet(c *Connection, irc *IRC) {
+	c.quiet = !c.quiet
+}
+func CommandHelp(c *Connection, irc *IRC)      {}
+func CommandAbout(c *Connection, irc *IRC)     {}
+func CommandLineCount(c *Connection, irc *IRC) {}
+func CommandDefine(c *Connection, irc *IRC) {
+	if len(irc.Arguments) < 2 || irc.Arguments[0] == "" {
+		irc.Reply(c, "usage: define [word] [text]")
+		return
+	}
+	action := irc.Arguments[0]
+	if _, ok := c.commandmap[action]; ok {
+		irc.Reply(c, fmt.Sprintf("already defined as command: %q", action))
+		return
+	}
+	definition := strings.Join(irc.Arguments[1:], " ")
+	c.definitions[action] = definition
+
+	err := c.SaveDefinitions()
+	if err != nil {
+		c.Log.Println(err)
+		return
+	}
+	irc.Reply(c, fmt.Sprintf("defined: %q", action))
+
+}
 func CommandLine(c *Connection, irc *IRC)          {}
 func CommandHistorySearch(c *Connection, irc *IRC) {}
 func CommandMasterDo(c *Connection, irc *IRC) {

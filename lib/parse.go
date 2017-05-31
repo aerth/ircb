@@ -3,8 +3,6 @@ package ircb
 import (
 	"fmt"
 	"strings"
-
-	"github.com/kr/pretty"
 )
 
 type IRC struct {
@@ -86,7 +84,5 @@ func (c *Connection) Parse(input string) *IRC {
 		}
 	}
 
-	// parsed
-	c.Log.Println("parsed:", pretty.Sprint(irc))
 	return irc
 }
