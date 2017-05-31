@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -18,6 +19,7 @@ var version = "ircb v0.0.7"
 
 type Connection struct {
 	Log         *log.Logger
+	HttpClient  *http.Client
 	conn        io.ReadWriteCloser
 	config      *Config
 	since       time.Time
@@ -64,6 +66,7 @@ func (config *Config) NewConnection() (*Connection, error) {
 	}
 	c.commandmap = DefaultCommandMap()
 	c.mastermap = DefaultMasterMap()
+	c.HttpClient = http.DefaultClient
 	// dial direct
 	c.conn, err = net.Dial("tcp", c.config.Host)
 	if err != nil {

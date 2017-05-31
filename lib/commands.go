@@ -24,7 +24,6 @@ func HandleVerbINT(c *Connection, irc *IRC) {
 func HandleMasterVerb(c *Connection, irc *IRC) bool {
 	const handled = true
 	const nothandled = false
-	defer c.Log.Println("Got master command:", irc)
 	switch irc.Verb {
 	default:
 		c.Log.Printf("new verb: %q", irc.Verb)
@@ -96,6 +95,11 @@ func HandleVerb(c *Connection, irc *IRC) {
 				return
 			}
 			c.Log.Printf("command not found: %q", irc.Command)
+		}
+		if strings.Contains(irc.Message, "http") {
+			c.Log.Println("trying http!")
+			c.HandleLinks(irc)
+			return
 		}
 	}
 }
