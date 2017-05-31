@@ -12,6 +12,9 @@ import (
 )
 
 func (c *Connection) HandleLinks(irc *IRC) {
+	if !c.config.ParseLinks {
+		return
+	}
 	defer c.Log.Println("done handling link")
 	i := strings.Index(irc.Message, "http")
 	if i == -1 {

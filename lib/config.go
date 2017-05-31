@@ -15,6 +15,7 @@ type Config struct {
 	InvalidSSL     bool
 	EnableTools    bool
 	EnableKarma    bool
+	ParseLinks     bool
 	EnableHistory  bool
 	EnableMacros   bool
 	HistoryFile    string
@@ -35,6 +36,8 @@ func NewDefaultConfig() *Config {
 	config.EnableTools = true
 	config.EnableKarma = true
 	config.EnableHistory = true
+	config.ParseLinks = false
+
 	config.EnableMacros = true
 	return config
 }
