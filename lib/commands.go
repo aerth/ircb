@@ -190,9 +190,16 @@ func CommandMasterDebug(c *Connection, irc *IRC) {
 }
 func CommandMasterReload(c *Connection, irc *IRC) {}
 func CommandMasterUpgrade(c *Connection, irc *IRC) {
-	update := exec.Command("git", "pull", "origin", "lite")
+	checkout := exec.Command("git", "checkout", "master")
+	out, err := checkout.CombinedOutput()
+	c.Log.Println(string(out))
+	if err != nil {
+		c.Log.Println(irc, err)
+		return
+	}
+	update := exec.Command("git", "pull", "origin", "master")
 
-	out, err := update.CombinedOutput()
+	out, err = update.CombinedOutput()
 	c.Log.Println(string(out))
 	if err != nil {
 		c.Log.Println(irc, err)
