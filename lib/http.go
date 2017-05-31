@@ -45,7 +45,7 @@ func (c *Connection) HandleLinks(irc *IRC) {
 	}
 	if resp.StatusCode != 200 {
 		// reply error
-		irc.Reply(c, fmt.Sprintf("%s %s", resp.Status, t1.Sub(time.Now())))
+		irc.Reply(c, fmt.Sprintf("%s %s", resp.Status, time.Now().Sub(t1)))
 
 		return
 	}
