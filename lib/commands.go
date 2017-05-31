@@ -100,6 +100,10 @@ func HandleVerb(c *Connection, irc *IRC) {
 		}
 
 		if definition, ok := c.definitions[irc.Command]; ok {
+			if len(irc.Arguments) == 1 {
+				irc.Reply(c, irc.Arguments[0]+": "+definition)
+				return
+			}
 			irc.Reply(c, definition)
 			return
 		}
@@ -109,6 +113,7 @@ func HandleVerb(c *Connection, irc *IRC) {
 
 func DefaultCommandMap() map[string]Command {
 	m := make(map[string]Command)
+	m["q"] = CommandQuiet
 	m["up"] = CommandUptime
 	m["uptime"] = CommandHostUptime
 	m["help"] = CommandHelp

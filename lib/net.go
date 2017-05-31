@@ -106,6 +106,12 @@ func (c *Connection) Write(b []byte) (n int, err error) {
 	if string(b[len(b)-2:]) != "\r\n" {
 		b = append(b, "\r\n"...)
 	}
+
+	if c.quiet {
+		c.Log.Println("MUTED:", string(b))
+		return
+	}
+
 	c.Log.Println("SEND", string(b))
 	return c.conn.Write(b)
 }
