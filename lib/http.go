@@ -53,7 +53,12 @@ func (c *Connection) HandleLinks(irc *IRC) {
 	reader := io.LimitReader(resp.Body, 1024)
 	meta := GetLinkTitleFromHTML(reader)
 	// reply
-	irc.Reply(c, fmt.Sprintf("%s %s %q", resp.Status, time.Now().Sub(t1), meta.Title))
+	if meta.Title != "" {
+		irc.Reply(c, fmt.Sprintf("%s %s %q", resp.Status, time.Now().Sub(t1), meta.Title))
+		return
+	}
+	irc.Reply(c, fmt.Sprintf("%s %s", resp.Status, t1.Sub(time.Now())))
+	return
 
 }
 
