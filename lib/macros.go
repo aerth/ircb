@@ -7,12 +7,12 @@ import (
 	"strings"
 )
 
-func LoadDefinitions(filename string) (map[string]string, error) {
+func LoadBackupDefinitions(filename string) (map[string]string, error) {
 	m := make(map[string]string)
 	if _, err := os.Stat(filename); err != nil {
 		if strings.Contains(err.Error(), "no such") {
 
-			return m, ioutil.WriteFile(filename, []byte("{}"), 0700)
+			return m, ioutil.WriteFile(filename, []byte("{}"), 0600)
 
 		}
 	}
@@ -25,10 +25,10 @@ func LoadDefinitions(filename string) (map[string]string, error) {
 	return m, err
 }
 
-func (c *Connection) SaveDefinitions() error {
+func (c *Connection) BackupDefinitions() error {
 	b, err := json.Marshal(c.definitions)
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(c.config.DictionaryFile, b, 0700)
+	return ioutil.WriteFile("dictionary.backup", b, 0600)
 }

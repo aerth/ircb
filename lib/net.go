@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/boltdb/bolt"
 )
 
 var version = "ircb v0.0.7"
@@ -19,82 +21,65 @@ var version = "ircb v0.0.7"
 type Connection struct {
 	Log         *log.Logger
 	HttpClient  *http.Client
-	conn        io.ReadWriteCloser
 	config      *Config
-	since       time.Time
-	lines       int
-	historyfile *os.File
-	karmafile   *os.File
+	boltdb      *bolt.DB
+	conn        io.ReadWriteCloser
+	since       time.Time // since connected to server
+	masterauth  time.Time // auth and auth timeout
 	reader      *bufio.Reader
-	writer      *bufio.Writer
-	done        chan int
 	definitions map[string]string
-	commandmap  map[string]Command
-	mastermap   map[string]Command
 	karma       map[string]int // map[nick]level
 	karmalock   sync.Mutex
+	connected   bool
 	joined      bool
 	quiet       bool
 }
 
 func (config *Config) NewConnection() (*Connection, error) {
 	var err error
-	if config.HistoryFile == "" {
-		config.HistoryFile = "history.db"
-	}
-	if config.KarmaFile == "" {
-		config.KarmaFile = "karma.db"
-	}
-	if config.DictionaryFile == "" {
-		config.DictionaryFile = "dictionary.db"
+	if config.Database == "" {
+		config.Database = "bolt.db"
 	}
 	c := new(Connection)
-	c.Log = log.New(os.Stderr, "", log.Lshortfile)
 	c.config = config
-	c.since = time.Now()
-	c.lines = 0
-	c.done = make(chan int)
-	c.historyfile, err = os.OpenFile(config.HistoryFile, os.O_CREATE|os.O_RDWR, 0700)
+	c.Log = log.New(os.Stderr, "", log.Lshortfile)
+	c.boltdb, err = loadDatabase(c.config.Database)
 	if err != nil {
-		return c, err
+		return nil, err
 	}
-	c.karmafile, err = os.OpenFile(config.KarmaFile, os.O_CREATE|os.O_RDWR, 0700)
-	if err != nil {
-		return c, err
-	}
-	c.definitions, err = LoadDefinitions(config.DictionaryFile)
-	if err != nil {
-		return c, err
-	}
-	c.karma, err = LoadKarmaMap(c.karmafile)
-	if err != nil {
-		return c, err
-	}
-	c.commandmap = DefaultCommandMap()
-	c.mastermap = DefaultMasterMap()
-	c.HttpClient = http.DefaultClient
-	// dial direct
-	c.conn, err = net.Dial("tcp", c.config.Host)
-	if err != nil {
-		return c, err
-	}
-	err = c.initialconnect()
-	if err != nil {
-		return c, err
-	}
-	c.Log.Println("connected.")
-	go c.readerwriter()
-	return c, err
-}
 
+	c.since = time.Now()
+	c.HttpClient = http.DefaultClient
+	return c, nil
+}
+func (c *Connection) Connect() (err error) {
+	if !c.connected {
+		c.connected = true
+
+		// dial direct
+		c.Log.Println("connecting...")
+		c.conn, err = net.Dial("tcp", c.config.Host)
+		if err != nil {
+			return err
+		}
+		err = c.initialconnect()
+		if err != nil {
+			return err
+		}
+		c.Log.Println("connected.")
+		return c.readerwriter()
+	}
+	return fmt.Errorf("already connected")
+}
 func (c *Connection) Close() error {
-	defer c.historyfile.Close()
-	defer c.karmafile.Close()
+	err1 := c.boltdb.Close()
+	if err1 != nil {
+		c.Log.Println(err1)
+	}
 	_, err := c.conn.Write([]byte(fmt.Sprintf("QUIT :%s\r\n", version)))
 	if err != nil {
 		return err
 	}
-	c.done <- 0
 	return c.conn.Close()
 }
 
@@ -116,6 +101,10 @@ func (c *Connection) Write(b []byte) (n int, err error) {
 	return c.conn.Write(b)
 }
 
+func (c *Connection) MasterCheck() {
+	c.Write([]byte("PRIVMSG NickServ :ACC " + strings.Split(c.config.Master, ":")[0]))
+}
+
 // Send IRC
 func (c *Connection) Send(irc IRC) {
 	e := irc.Encode()
@@ -128,9 +117,6 @@ func (c *Connection) Send(irc IRC) {
 		c.Log.Println(err)
 	}
 }
-func (c *Connection) Wait() {
-	<-c.done
-}
 
 func (c *Connection) initialconnect() error {
 	b := make([]byte, 512)
@@ -139,12 +125,10 @@ func (c *Connection) initialconnect() error {
 		return err
 	}
 	c.Log.Println(string(b))
-
 	_, err = c.conn.Write([]byte(fmt.Sprintf("NICK %s\r\n", c.config.Nick)))
 	if err != nil {
 		return err
 	}
-
 	_, err = c.conn.Write([]byte(fmt.Sprintf("USER %s 0.0.0.0 0.0.0.0 :%s\r\n", c.config.Nick, c.config.Nick)))
 	if err != nil {
 		return err
@@ -158,19 +142,19 @@ func (c *Connection) initialconnect() error {
 	return nil
 }
 
-func (c *Connection) readerwriter() {
+// read until read error
+func (c *Connection) readerwriter() error {
 	c.Log.Println("reading from net")
 	defer c.Log.Println("reader stopping")
 	c.reader = bufio.NewReaderSize(c.conn, 512)
 	for {
 		msg, err := c.reader.ReadString('\n')
 		if err != nil {
-			c.Log.Println("read error:", err)
-			if err == io.EOF || strings.Contains(err.Error(), "use of closed") {
-				return
-			}
+			return err
 		}
 		c.Log.Printf("read: %q", msg)
+
+		// handle PING
 		if strings.HasPrefix(msg, "PING") {
 			pong := []byte(strings.Replace(msg, "PING", "PONG", -1))
 			_, err = c.Write(pong)
@@ -180,18 +164,49 @@ func (c *Connection) readerwriter() {
 			continue
 		}
 		msg = strings.TrimPrefix(msg, ":")
-		irc := c.Parse(msg)
-		if _, err := strconv.Atoi(irc.Verb); err == nil {
-			HandleVerbINT(c, irc)
-			continue
-		}
 
-		if irc.ReplyTo == strings.Split(c.config.Master, ":")[0] {
-			if HandleMasterVerb(c, irc) {
+		// parse
+		irc := Parse(c.config.CommandPrefix, c.config.Nick, msg)
+
+		// numeric 'verb'
+		if _, err := strconv.Atoi(irc.Verb); err == nil {
+			if verbIntHandler(c, irc) {
 				continue
 			}
 		}
 
-		HandleVerb(c, irc)
+		switch irc.Verb {
+		case "NOTICE":
+			if irc.ReplyTo == "NickServ" {
+				//				:NickServ!NickServ@services. NOTICE aerth :mustangsally ACC 3
+				if irc.Message == fmt.Sprintf("%s ACC 3", c.config.Master) {
+					c.masterauth = time.Now()
+
+				}
+			}
+		case "MODE":
+			c.Log.Printf("got mode: %q", irc.Message)
+			if !c.joined {
+				for _, ch := range strings.Split(c.config.Channels, ",") {
+					if ch != "" {
+						c.Log.Println("Joining channel:", ch)
+						c.Write([]byte(fmt.Sprintf("JOIN %s", ch)))
+					}
+				}
+				c.joined = true
+
+			}
+
+		case "PRIVMSG":
+
+			// maybe master command
+			if irc.ReplyTo == strings.Split(c.config.Master, ":")[0] {
+				if privmsgMasterHandler(c, irc) {
+					continue
+				}
+			}
+
+			privmsgHandler(c, irc)
+		}
 	}
 }

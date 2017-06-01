@@ -22,7 +22,25 @@ func (irc IRC) Encode() []byte {
 	return []byte(fmt.Sprintf("PRIVMSG %s :%s\r\n", irc.To, irc.Message))
 }
 
+// ReplyUser doesnt send to #channel
+func (irc *IRC) ReplyUser(c *Connection, s string) {
+
+	if strings.Contains(irc.ReplyTo, "#") || strings.TrimSpace(s) == "" {
+		return
+	}
+	reply := IRC{
+		To:      irc.ReplyTo,
+		Message: s,
+	}
+
+	c.Send(reply)
+}
+
+// Reply replies to an irc message, preferring a channel
 func (irc *IRC) Reply(c *Connection, s string) {
+	if strings.TrimSpace(s) == "" {
+		return
+	}
 	reply := IRC{
 		To:      irc.ReplyTo,
 		Message: s,
@@ -33,7 +51,8 @@ func (irc *IRC) Reply(c *Connection, s string) {
 	c.Send(reply)
 }
 
-func (c *Connection) Parse(input string) *IRC {
+// Parse input string into IRC struct. To parse fully we need commandprefix and nickname as well.
+func Parse(commandprefix, nick, input string) *IRC {
 	input = strings.TrimSpace(input)
 	if input == "" {
 		return nil
@@ -46,7 +65,6 @@ func (c *Connection) Parse(input string) *IRC {
 
 	// never happens
 	if len(s) == 1 {
-		c.Log.Println("unreachable")
 		return irc
 	}
 
@@ -72,11 +90,11 @@ func (c *Connection) Parse(input string) *IRC {
 		}
 	}
 	irc.Message = strings.TrimPrefix(irc.Message, ":")
-	irc.IsWhisper = s[2] == c.config.Nick
+	irc.IsWhisper = s[2] == nick
 
 	// is a command?
-	if strings.HasPrefix(irc.Message, c.config.CommandPrefix) {
-		cmd := strings.TrimPrefix(irc.Message, c.config.CommandPrefix)
+	if strings.HasPrefix(irc.Message, commandprefix) {
+		cmd := strings.TrimPrefix(irc.Message, commandprefix)
 		args := strings.Split(cmd, " ")
 		irc.Command = args[0]
 		if len(args) > 1 {

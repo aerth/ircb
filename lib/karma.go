@@ -2,10 +2,8 @@ package ircb
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
-	"strconv"
 	"strings"
 )
 
@@ -14,33 +12,40 @@ func KarmaShow(c *Connection, irc *IRC) {
 		return
 	}
 
-	irc.Reply(c, c.karmaShow(irc.Arguments[0]))
+	irc.Reply(c, c.KarmaShow(irc.Arguments[0]))
 }
-func (c *Connection) ParseKarma(input string) error {
+func (c *Connection) ParseKarma(input string) (handled bool) {
+	handled = false
 	split := strings.Split(input, " ")
 	if len(split) < 1 {
-		return fmt.Errorf("too short: %s", split)
+		return false
 	}
 
 	if len(split) > 1 {
-		return fmt.Errorf("too long")
+		if strings.Contains(input, "thank") {
+			if i := strings.Index(input, ":"); i != -1 {
+				c.KarmaUp(input[0:i])
+				return true
+			}
+			return false
+		}
+		return false
 	}
 
 	if strings.HasSuffix(input, "+") {
 		c.KarmaUp(strings.Replace(input, "+", "", -1))
-		return nil
+		return true
 	}
 
 	if strings.HasSuffix(input, "-") {
 		c.KarmaDown(strings.Replace(input, "-", "", -1))
-		return nil
+		return true
 	}
-
-	return fmt.Errorf("no karma to parse")
+	return false
 }
 
-func LoadKarmaMap(f *os.File) (map[string]int, error) {
-	stat, err := f.Stat()
+func LoadBackupKarmaMap(filename string) (map[string]int, error) {
+	stat, err := os.Stat(filename)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +53,7 @@ func LoadKarmaMap(f *os.File) (map[string]int, error) {
 	if stat.Size() == 0 {
 		return m, nil
 	}
-	b, err := ioutil.ReadAll(f)
+	b, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
@@ -59,49 +64,10 @@ func LoadKarmaMap(f *os.File) (map[string]int, error) {
 	return m, nil
 }
 
-func (c *Connection) SaveKarmaMap() error {
+func (c *Connection) SaveBackupKarmaMap() error {
 	b, err := json.Marshal(c.karma)
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(c.karmafile.Name(), b, 0700)
-}
-func (c *Connection) KarmaUp(name string) {
-	c.karmalock.Lock()
-
-	defer c.karmalock.Unlock()
-
-	c.Log.Println("karma up:", name)
-	if _, ok := c.karma[name]; !ok {
-		c.karma[name] = 1
-		return
-	}
-	c.karma[name]++
-	if err := c.SaveKarmaMap(); err != nil {
-		c.Log.Println("cant save karma map:", err)
-	}
-
-}
-
-func (c *Connection) KarmaDown(name string) {
-	c.karmalock.Lock()
-	defer c.karmalock.Unlock()
-	c.Log.Println("karma down:", name)
-	if _, ok := c.karma[name]; !ok {
-		c.karma[name] = 0
-		return
-	}
-	c.karma[name]--
-	if err := c.SaveKarmaMap(); err != nil {
-		c.Log.Println("cant save karma map:", err)
-	}
-}
-
-func (c *Connection) karmaShow(name string) string {
-	c.karmalock.Lock()
-	defer c.karmalock.Unlock()
-	if _, ok := c.karma[name]; !ok {
-		return ""
-	}
-	return strconv.Itoa(c.karma[name])
+	return ioutil.WriteFile("karma.backup", b, 0600)
 }

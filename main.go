@@ -52,7 +52,10 @@ LoadConfig:
 	if err != nil {
 		log.Fatal(err)
 	}
-	conn.Wait()
+	err = conn.Connect()
+	if err != nil {
+		log.Fatal(err)
+	}
 	if b, err := conn.MarshalConfig(); err == nil {
 		err := ioutil.WriteFile("config.json", b, 0700)
 		if err != nil {

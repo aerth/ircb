@@ -6,21 +6,19 @@ import (
 
 // Config holds configurable variables for ircb client
 type Config struct {
-	Host           string // in the form 'host:port'
-	Nick           string
-	Master         string // in the form 'master:prefix'
-	CommandPrefix  string
-	Channels       string // comma separated channels to autojoin
-	UseSSL         bool
-	InvalidSSL     bool
-	EnableTools    bool
-	EnableKarma    bool
-	ParseLinks     bool
-	EnableHistory  bool
-	EnableMacros   bool
-	HistoryFile    string
-	KarmaFile      string
-	DictionaryFile string
+	Host          string // in the form 'host:port'
+	Nick          string
+	Master        string // in the form 'master:prefix'
+	CommandPrefix string
+	Channels      string // comma separated channels to autojoin
+	UseSSL        bool
+	InvalidSSL    bool
+	EnableTools   bool
+	EnableKarma   bool
+	ParseLinks    bool
+	EnableHistory bool
+	EnableMacros  bool
+	Database      string // path to boltdb (can be empty to use data.db)
 }
 
 // NewDefaultConfig returns the default config, minimal changes would be Host,Nick,Master for typical usage.

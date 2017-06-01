@@ -8,107 +8,137 @@ import (
 	"time"
 )
 
+const handled = true
+const nothandled = false
+
+// MasterMap is all available master @commands
+var MasterMap map[string]Command
+
+// CommandMap is all available public !commands
+var CommandMap map[string]Command
+
+func init() {
+
+	// load default commands
+	if MasterMap == nil {
+		MasterMap = DefaultMasterMap()
+	}
+	if CommandMap == nil {
+		CommandMap = DefaultCommandMap()
+	}
+}
+
+// Command using a parsed IRC message
 type Command func(c *Connection, irc *IRC)
 
-func HandleVerbINT(c *Connection, irc *IRC) {
+func nilcommand(c *Connection, irc *IRC) {
+	c.Log.Println("nil command ran successfully")
+}
+
+func verbIntHandler(c *Connection, irc *IRC) bool {
 	verb, _ := strconv.Atoi(irc.Verb)
 	switch verb {
 	default: // unknown numerical verb
 		c.Log.Printf("new verb: %q", irc.Verb)
+	case 221:
+		c.Log.Printf("new mode: %q", irc.Message)
 	case 433:
+
 		c.Close()
-	}
-}
-func HandleMasterVerb(c *Connection, irc *IRC) bool {
-	const handled = true
-	const nothandled = false
-	switch irc.Verb {
-	default:
-		c.Log.Printf("new verb: %q", irc.Verb)
-	case "PRIVMSG":
-		if irc.ReplyTo != strings.Split(c.config.Master, ":")[0] {
-			c.Log.Printf("not master:", irc.ReplyTo)
-			return nothandled
-		}
-		i := strings.Index(c.config.Master, ":")
-
-		if i == -1 {
-			c.Log.Println("bad config, not semicolon in Master field")
-			return nothandled
-		}
-		if i >= len(c.config.Master) {
-			c.Log.Println("bad config, bad semicolon in Master field")
-			return nothandled
-		}
-		mp := c.config.Master[i+1:]
-		if !strings.HasPrefix(irc.Message, mp) {
-			return nothandled
-		}
-		irc.Message = strings.TrimPrefix(irc.Message, mp)
-		irc.Command = strings.Split(irc.Message, " ")[0]
-		irc.Arguments = strings.Split(strings.TrimPrefix(irc.Message, irc.Command+" "), " ")
-
-		if irc.Command != "" {
-			if fn, ok := c.mastermap[irc.Command]; ok {
-				c.Log.Printf("master command found: %q", irc.Command)
-				fn(c, irc)
-				return handled
-			}
-		}
-		c.Log.Printf("master command not found: %q", irc.Command)
-		return nothandled
-
 	}
 	return nothandled
 }
-func HandleVerb(c *Connection, irc *IRC) {
-	switch irc.Verb {
-	default: // unknown string verb
-		c.Log.Printf("new verb: %q", irc.Verb)
-	case "MODE":
-		c.Log.Printf("got mode: %q", irc.Message)
-		if !c.joined {
-			for _, ch := range strings.Split(c.config.Channels, ",") {
-				if ch != "" {
-					c.Log.Println("Joining channel:", ch)
-					c.Write([]byte(fmt.Sprintf("JOIN %s", ch)))
-				}
-			}
-			c.joined = true
 
-		}
-	case "PRIVMSG":
-		if strings.Count(irc.Message, " ") == 0 && strings.HasPrefix(irc.To, "#") {
-			err := c.ParseKarma(irc.Message)
-			if err == nil {
-				return
-			}
-			c.Log.Println(err) // continue maybe is command?
-		}
-		if irc.Command != "" {
-			if fn, ok := c.commandmap[irc.Command]; ok {
-				c.Log.Printf("command found: %q", irc.Command)
-				fn(c, irc)
-				return
-			}
-			c.Log.Printf("command not found: %q", irc.Command)
-		}
+func privmsgMasterHandler(c *Connection, irc *IRC) bool {
+	if irc.ReplyTo != strings.Split(c.config.Master, ":")[0] {
+		c.Log.Printf("not master:", irc.ReplyTo)
+		return nothandled
+	}
 
-		// try to parse http link title
-		if strings.Contains(irc.Message, "http") {
-			go c.HandleLinks(irc)
-		}
+	if time.Now().Sub(c.masterauth) > 5*time.Minute {
+		c.Log.Println("bad master, need reauth")
+		irc.ReplyUser(c, "try again in a couple")
+		c.conn.Write([]byte(`PRIVMSG NickServ :ACC aerth`))
+		return nothandled
+	}
 
-		if definition, ok := c.definitions[irc.Command]; ok {
-			if len(irc.Arguments) == 1 {
-				irc.Reply(c, irc.Arguments[0]+": "+definition)
-				return
-			}
+	i := strings.Index(c.config.Master, ":")
+
+	if i == -1 {
+		c.Log.Println("bad config, not semicolon in Master field")
+		return nothandled
+	}
+	if i >= len(c.config.Master) {
+		c.Log.Println("bad config, bad semicolon in Master field")
+		return nothandled
+	}
+	mp := c.config.Master[i+1:]
+	if !strings.HasPrefix(irc.Message, mp) {
+		return nothandled
+	}
+	irc.Message = strings.TrimPrefix(irc.Message, mp)
+	irc.Command = strings.Split(irc.Message, " ")[0]
+	irc.Arguments = strings.Split(strings.TrimPrefix(irc.Message, irc.Command+" "), " ")
+
+	if irc.Command != "" {
+		if fn, ok := MasterMap[irc.Command]; ok {
+			c.Log.Printf("master command found: %q", irc.Command)
+			fn(c, irc)
+			return handled
+		}
+	}
+	c.Log.Printf("master command not found: %q", irc.Command)
+	return nothandled
+
+}
+
+func GetPublicCommand(word string) Command {
+	fn, ok := CommandMap[word]
+	if !ok {
+		return nilcommand
+	}
+	return fn
+}
+
+func IsPublicCommand(word string) bool {
+	_, ok := CommandMap[word]
+	return ok
+}
+func privmsgHandler(c *Connection, irc *IRC) {
+
+	// is karma
+	if strings.Count(irc.Message, " ") == 0 && strings.HasPrefix(irc.To, "#") {
+		if c.ParseKarma(irc.Message) {
+			return
+		}
+	}
+
+	if irc.Command != "" {
+		if fn, ok := CommandMap[irc.Command]; ok {
+			c.Log.Printf("command found: %q", irc.Command)
+			fn(c, irc)
+			return
+		}
+	}
+
+	// handle channel defined definitions
+	if irc.Command != "" && len(irc.Arguments) == 0 {
+		definition := c.getDefinition(irc.Command)
+		if definition != "" {
 			irc.Reply(c, definition)
 			return
 		}
 
 	}
+
+	if irc.Command != "" {
+		c.Log.Printf("command not found: %q", irc.Command)
+	}
+	// try to parse http link title
+	if c.config.ParseLinks && strings.Contains(irc.Message, "http") {
+		go c.HandleLinks(irc)
+	}
+
 }
 
 func DefaultCommandMap() map[string]Command {
@@ -131,9 +161,8 @@ func DefaultMasterMap() map[string]Command {
 	m := make(map[string]Command)
 	m["do"] = CommandMasterDo
 	m["upgrade"] = CommandMasterUpgrade
-	//	m["voice"] = CommandMasterVoice
-	//	m["reload"] = CommandMasterReload
-	//	m["macro"] = CommandMasterMacro
+	m["q"] = CommandMasterQuit
+	m["set"] = CommandMasterSet
 	return m
 }
 
@@ -158,6 +187,11 @@ func CommandEcho(c *Connection, irc *IRC) {
 }
 func CommandQuiet(c *Connection, irc *IRC) {
 	c.quiet = !c.quiet
+	if !c.quiet {
+		c.Log.Println("no longer quiet")
+		irc.Reply(c, "\x01ACTION gasps for air\x01")
+	}
+	c.Log.Println("muted")
 }
 func CommandHelp(c *Connection, irc *IRC)      {}
 func CommandAbout(c *Connection, irc *IRC)     {}
@@ -168,18 +202,13 @@ func CommandDefine(c *Connection, irc *IRC) {
 		return
 	}
 	action := irc.Arguments[0]
-	if _, ok := c.commandmap[action]; ok {
+	if _, ok := CommandMap[action]; ok {
 		irc.Reply(c, fmt.Sprintf("already defined as command: %q", action))
 		return
 	}
 	definition := strings.Join(irc.Arguments[1:], " ")
-	c.definitions[action] = definition
 
-	err := c.SaveDefinitions()
-	if err != nil {
-		c.Log.Println(err)
-		return
-	}
+	c.DatabaseDefine(action, definition)
 	irc.Reply(c, fmt.Sprintf("defined: %q", action))
 
 }
@@ -194,6 +223,33 @@ func CommandMasterDebug(c *Connection, irc *IRC) {
 	c.Log.Println(c, irc)
 }
 func CommandMasterReload(c *Connection, irc *IRC) {}
+func CommandMasterSet(c *Connection, irc *IRC) {
+	if len(irc.Arguments) != 2 {
+		irc.Reply(c, `usage: set optionname on|off`)
+		return
+	}
+	option := irc.Arguments[0]
+	value := irc.Arguments[1]
+	switch option {
+	default:
+		irc.Reply(c, `usage: set optionname on|off`)
+		return
+	case "links":
+		switch value {
+		case "on":
+			c.config.ParseLinks = true
+		case "off":
+			c.config.ParseLinks = false
+
+		default:
+			irc.Reply(c, `usage: set optionname on|off`)
+
+			return
+		}
+	}
+
+}
+
 func CommandMasterUpgrade(c *Connection, irc *IRC) {
 	checkout := exec.Command("git", "checkout", "master")
 	out, err := checkout.CombinedOutput()
