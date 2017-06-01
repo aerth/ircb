@@ -58,7 +58,7 @@ func privmsgMasterHandler(c *Connection, irc *IRC) bool {
 	if time.Now().Sub(c.masterauth) > 5*time.Minute {
 		c.Log.Println("bad master, need reauth")
 		irc.ReplyUser(c, "try again in a couple")
-		c.Write([]byte(`PRIVMSG NickServ :ACC aerth`))
+		c.MasterCheck()
 		return nothandled
 	}
 
