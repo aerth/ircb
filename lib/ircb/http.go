@@ -69,7 +69,7 @@ func (c *Connection) HandleLinks(irc *IRC) {
 
 	// reply
 	if meta.Title != "" {
-		irc.Reply(c, fmt.Sprintf("%s %s %q (%s)", resp.Status, time.Now().Sub(t1), meta.Title))
+		irc.Reply(c, fmt.Sprintf("%s %s %q (%s)", resp.Status, time.Now().Sub(t1), meta.Title, meta.ContentType))
 		return
 	}
 	irc.Reply(c, fmt.Sprintf("%s %s (%s)", resp.Status, time.Now().Sub(t1), meta.ContentType))
