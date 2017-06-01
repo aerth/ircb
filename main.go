@@ -33,7 +33,8 @@ func main() {
 
 LoadConfig:
 	config := buildconfig()
-	if b, err := ioutil.ReadFile("config.json"); err == nil {
+	b, err := ioutil.ReadFile("config.json")
+	if err == nil {
 		if len(b) != 0 {
 			err = json.Unmarshal(b, &config)
 			if err != nil {
@@ -43,10 +44,10 @@ LoadConfig:
 	} else if strings.Contains(err.Error(), "no such") {
 		_, err = os.Create("config.json")
 		if err != nil {
-			log.Println("cant create config.json:", err)
-		} else {
-			goto LoadConfig
+			log.Fatalln("cant create config.json:", err)
 		}
+		goto LoadConfig
+
 	}
 	conn, err := config.NewConnection()
 	if err != nil {
@@ -56,6 +57,7 @@ LoadConfig:
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	if b, err := conn.MarshalConfig(); err == nil {
 		err := ioutil.WriteFile("config.json", b, 0700)
 		if err != nil {
