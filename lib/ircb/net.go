@@ -53,6 +53,7 @@ func (config *Config) NewConnection() (*Connection, error) {
 	return c, nil
 }
 func (c *Connection) Connect() (err error) {
+	DefaultCommandMaps()
 	if !c.connected {
 		c.connected = true
 
@@ -166,7 +167,8 @@ func (c *Connection) readerwriter() error {
 		msg = strings.TrimPrefix(msg, ":")
 
 		// parse
-		irc := Parse(c.config.CommandPrefix, c.config.Nick, msg)
+		cfg := *c.config
+		irc := cfg.Parse(msg)
 
 		// numeric 'verb'
 		if _, err := strconv.Atoi(irc.Verb); err == nil {
@@ -177,13 +179,14 @@ func (c *Connection) readerwriter() error {
 
 		switch irc.Verb {
 		case "NOTICE":
-			if irc.ReplyTo == "NickServ" {
-				//				:NickServ!NickServ@services. NOTICE aerth :mustangsally ACC 3
-				if irc.Raw == fmt.Sprintf("NickServ!NickServ@services. NOTICE thunix-bot :%s ACC 3 \r\n", strings.Split(c.config.Master, ":")[0]) {
-					c.masterauth = time.Now()
+			// :NickServ!NickServ@services. NOTICE mastername :mustangsally ACC 3
+			if irc.ReplyTo == "NickServ" && irc.Raw == fmt.Sprintf(formatauth, c.config.Nick, strings.Split(c.config.Master, ":")[0]) {
+				c.masterauth = time.Now()
 
-				}
+			} else {
+				c.Log.Println("NOTICE from %q: %q\n\t%q\n\n", irc.ReplyTo, irc.Message, irc.Raw)
 			}
+
 		case "MODE":
 			c.Log.Printf("got mode: %q", irc.Message)
 			if !c.joined {

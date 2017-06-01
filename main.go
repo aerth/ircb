@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	ircb "github.com/aerth/ircb/lib"
+	"github.com/aerth/ircb/lib/ircb"
 )
 
 func init() {
@@ -84,7 +84,6 @@ func buildconfig() *ircb.Config {
 	if addr := os.Getenv("ADDR"); addr != "" {
 		config.Host = addr
 	}
-
 	if nick := os.Getenv("NICK"); nick != "" {
 		config.Nick = nick
 	}

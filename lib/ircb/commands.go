@@ -11,24 +11,43 @@ import (
 const handled = true
 const nothandled = false
 
-// MasterMap is all available master @commands
+// MasterMap is all available master @commands, customize before connecting.
 var MasterMap map[string]Command
 
-// CommandMap is all available public !commands
+// CommandMap is all available public !commands, customize before connecting.
 var CommandMap map[string]Command
 
-func init() {
+func DefaultCommandMaps() {
 
 	// load default commands
-	if MasterMap == nil {
+	if MasterMap == nil || len(MasterMap) == 0 {
 		MasterMap = DefaultMasterMap()
 	}
-	if CommandMap == nil {
+	if CommandMap == nil || len(MasterMap) == 0 {
 		CommandMap = DefaultCommandMap()
 	}
 }
 
-// Command using a parsed IRC message
+// Command is what executes using a parsed IRC message
+// irc message '!echo arg1 arg2' gets parsed as:
+// 	'irc.Command = echo', 'irc.CommandArguments = []string{"arg1","arg2"}
+// Command will be executed if it is in CommandMap or MasterMap
+// Map Commands before connecting:
+//	ircb.CommandMap
+// 	ircb.DefaultCommandMaps() // load defaults, optional.
+// 	ircb.CommandMap["echo"] = CommandEcho
+//	// Add a new command called hello, executed with !hello
+// !hello responds in channel, using name of user commander
+//	ircb.CommandMap["hello"] = func(c *Connection, irc *IRC){
+//		irc.Reply(c, fmt.Sprintf("hello, %s!", irc.ReplyTo))
+//		}
+//	// Command parser will deal with authentication.
+//	// This makes adding new master commands easy:
+//	ircb.MasterMap["stat"] = func(c *Connection, irc.*IRC){
+//		irc.ReplyUser(c, fmt.Sprintf("lines received: %v", c.lines))
+//	}
+
+// Reply with irc.ReplyUser (for /msg reply) or irc.Reply (for channel)
 type Command func(c *Connection, irc *IRC)
 
 func nilcommand(c *Connection, irc *IRC) {
