@@ -3,6 +3,7 @@ package ircb
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -55,12 +56,23 @@ func (c *Connection) HandleLinks(irc *IRC) {
 	defer resp.Body.Close()
 	reader := io.LimitReader(resp.Body, 1024)
 	meta := GetLinkTitleFromHTML(reader)
+	b, err := ioutil.ReadAll(reader)
+	if err == nil {
+		ct := http.DetectContentType(b)
+		meta.ContentType = ct
+
+	} else {
+
+		c.Log.Println("error reading from reader:", err)
+
+	}
+
 	// reply
 	if meta.Title != "" {
-		irc.Reply(c, fmt.Sprintf("%s %s %q", resp.Status, time.Now().Sub(t1), meta.Title))
+		irc.Reply(c, fmt.Sprintf("%s %s %q (%s)", resp.Status, time.Now().Sub(t1), meta.Title))
 		return
 	}
-	irc.Reply(c, fmt.Sprintf("%s %s", resp.Status, time.Now().Sub(t1)))
+	irc.Reply(c, fmt.Sprintf("%s %s (%s)", resp.Status, time.Now().Sub(t1), meta.ContentType))
 	return
 
 }
@@ -70,6 +82,7 @@ type htmlMeta struct {
 	Description string `json:"description"`
 	Image       string `json:"image"`
 	SiteName    string `json:"site_name"`
+	ContentType string `json:"content_type"`
 }
 
 func GetLinkTitleFromHTML(reader io.Reader) *htmlMeta {

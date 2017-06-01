@@ -80,7 +80,7 @@ func privmsgMasterHandler(c *Connection, irc *IRC) bool {
 		c.MasterCheck()
 		return nothandled
 	}
-
+       c.Log.Println("got master message, parsing...")
 	i := strings.Index(c.config.Master, ":")
 
 	if i == -1 {
@@ -93,13 +93,16 @@ func privmsgMasterHandler(c *Connection, irc *IRC) bool {
 	}
 	mp := c.config.Master[i+1:]
 	if !strings.HasPrefix(irc.Message, mp) {
+               c.Log.Println("not master command prefixed")
 		return nothandled
 	}
 	irc.Message = strings.TrimPrefix(irc.Message, mp)
+
 	irc.Command = strings.Split(irc.Message, " ")[0]
 	irc.Arguments = strings.Split(strings.TrimPrefix(irc.Message, irc.Command+" "), " ")
-
+       c.Log.Printf("master command request: %s %s", irc.Command, irc.Arguments)
 	if irc.Command != "" {
+       c.Log.Println("trying master command:", irc.Command)
 		if fn, ok := MasterMap[irc.Command]; ok {
 			c.Log.Printf("master command found: %q", irc.Command)
 			fn(c, irc)
