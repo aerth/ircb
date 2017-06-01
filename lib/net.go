@@ -179,7 +179,7 @@ func (c *Connection) readerwriter() error {
 		case "NOTICE":
 			if irc.ReplyTo == "NickServ" {
 				//				:NickServ!NickServ@services. NOTICE aerth :mustangsally ACC 3
-				if irc.Message == fmt.Sprintf("%s ACC 3", c.config.Master) {
+				if irc.Raw == fmt.Sprintf("%s ACC 3 ", strings.Split(c.config.Master, ":")[0]) {
 					c.masterauth = time.Now()
 
 				}
