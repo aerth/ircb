@@ -51,14 +51,14 @@ func verbIntHandler(c *Connection, irc *IRC) bool {
 
 func privmsgMasterHandler(c *Connection, irc *IRC) bool {
 	if irc.ReplyTo != strings.Split(c.config.Master, ":")[0] {
-		c.Log.Printf("not master:", irc.ReplyTo)
+		c.Log.Printf("not master: %s", irc.ReplyTo)
 		return nothandled
 	}
 
 	if time.Now().Sub(c.masterauth) > 5*time.Minute {
 		c.Log.Println("bad master, need reauth")
 		irc.ReplyUser(c, "try again in a couple")
-		c.conn.Write([]byte(`PRIVMSG NickServ :ACC aerth`))
+		c.Write([]byte(`PRIVMSG NickServ :ACC aerth`))
 		return nothandled
 	}
 
