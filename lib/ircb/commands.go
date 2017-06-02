@@ -237,7 +237,7 @@ func CommandHelp(c *Connection, irc *IRC) {
 }
 
 func CommandAbout(c *Connection, irc *IRC) {
-	irc.Reply("I'm a robot. You can learn more at https://aerth.github.io/ircb/")
+	irc.Reply(c, "I'm a robot. You can learn more at https://aerth.github.io/ircb/")
 }
 func CommandLineCount(c *Connection, irc *IRC) {}
 func CommandDefine(c *Connection, irc *IRC) {
