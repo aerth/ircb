@@ -76,11 +76,13 @@ func privmsgMasterHandler(c *Connection, irc *IRC) bool {
 
 	if time.Now().Sub(c.masterauth) > 5*time.Minute {
 		c.Log.Println("bad master, need reauth")
-		irc.ReplyUser(c, "try again in a couple")
 		c.MasterCheck()
-		return nothandled
+		<-time.After(time.Second)
+		if time.Now().Sub(c.masterauth) > 5*time.Minute {
+			return nothandled
+		}
 	}
-       c.Log.Println("got master message, parsing...")
+	c.Log.Println("got master message, parsing...")
 	i := strings.Index(c.config.Master, ":")
 
 	if i == -1 {
@@ -93,16 +95,16 @@ func privmsgMasterHandler(c *Connection, irc *IRC) bool {
 	}
 	mp := c.config.Master[i+1:]
 	if !strings.HasPrefix(irc.Message, mp) {
-               c.Log.Println("not master command prefixed")
+		c.Log.Println("not master command prefixed")
 		return nothandled
 	}
 	irc.Message = strings.TrimPrefix(irc.Message, mp)
 
 	irc.Command = strings.Split(irc.Message, " ")[0]
 	irc.Arguments = strings.Split(strings.TrimPrefix(irc.Message, irc.Command+" "), " ")
-       c.Log.Printf("master command request: %s %s", irc.Command, irc.Arguments)
+	c.Log.Printf("master command request: %s %s", irc.Command, irc.Arguments)
 	if irc.Command != "" {
-       c.Log.Println("trying master command:", irc.Command)
+		c.Log.Println("trying master command:", irc.Command)
 		if fn, ok := MasterMap[irc.Command]; ok {
 			c.Log.Printf("master command found: %q", irc.Command)
 			fn(c, irc)
@@ -129,10 +131,9 @@ func IsPublicCommand(word string) bool {
 func privmsgHandler(c *Connection, irc *IRC) {
 
 	// is karma
-	if strings.Count(irc.Message, " ") == 0 && strings.HasPrefix(irc.To, "#") {
-		if c.ParseKarma(irc.Message) {
-			return
-		}
+	if strings.HasPrefix(irc.To, "#") && c.ParseKarma(irc.Message) {
+		return
+
 	}
 
 	if irc.Command != "" {
