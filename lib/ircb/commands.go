@@ -236,7 +236,9 @@ func CommandHelp(c *Connection, irc *IRC) {
 	}
 }
 
-func CommandAbout(c *Connection, irc *IRC)     {}
+func CommandAbout(c *Connection, irc *IRC) {
+	irc.Reply("I'm a robot. You can learn more at https://aerth.github.io/ircb/")
+}
 func CommandLineCount(c *Connection, irc *IRC) {}
 func CommandDefine(c *Connection, irc *IRC) {
 	if len(irc.Arguments) < 2 || irc.Arguments[0] == "" {
