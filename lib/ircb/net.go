@@ -106,6 +106,18 @@ func (c *Connection) MasterCheck() {
 	c.Write([]byte("PRIVMSG NickServ :ACC " + strings.Split(c.config.Master, ":")[0]))
 }
 
+// SendMaster sends fmt to master
+func SendMaster(c *Connection, format string, i ...interface{}) {
+	if strings.TrimSpace(s) == "" {
+		return
+	}
+	reply := IRC{
+		To:      strings.Split(c.config.Master, ":")[0],
+		Message: fmt.Sprintf(format, i...),
+	}
+	c.Send(reply)
+}
+
 // Send IRC
 func (c *Connection) Send(irc IRC) {
 	e := irc.Encode()
