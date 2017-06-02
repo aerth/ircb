@@ -157,6 +157,14 @@ func (c *Connection) initialconnect() error {
 
 // read until read error
 func (c *Connection) readerwriter() error {
+	logfile, err := openlogfile()
+	if err != nil {
+
+		return err
+	}
+	defer logfile.Close()
+	logfile.Write([]byte(fmt.Sprintf("log started: %s\n", time.Now().String())))
+	logfile.Sync()
 	c.Log.Println("reading from net")
 	defer c.Log.Println("reader stopping")
 	c.reader = bufio.NewReaderSize(c.conn, 512)
@@ -165,6 +173,8 @@ func (c *Connection) readerwriter() error {
 		if err != nil {
 			return err
 		}
+		logfile.Write([]byte(fmt.Sprintf("%s %q\n", time.Now().String(), msg)))
+		logfile.Sync()
 		c.Log.Printf("read: %q", msg)
 
 		// handle PING
