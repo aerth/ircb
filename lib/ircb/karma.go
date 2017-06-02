@@ -9,6 +9,7 @@ import (
 
 func KarmaShow(c *Connection, irc *IRC) {
 	if len(irc.Arguments) != 1 {
+		irc.Reply(c, c.KarmaShow(irc.ReplyTo))
 		return
 	}
 
