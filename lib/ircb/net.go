@@ -107,7 +107,7 @@ func (c *Connection) MasterCheck() {
 }
 
 // SendMaster sends fmt to master
-func SendMaster(c *Connection, format string, i ...interface{}) {
+func (c *Connection) SendMaster(format string, i ...interface{}) {
 	if strings.TrimSpace(s) == "" {
 		return
 	}
