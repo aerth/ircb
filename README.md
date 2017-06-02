@@ -1,31 +1,25 @@
 # ircb
 
-use flags once, saves in config
+friendly channel bot
 
-irc client
+  * karma system
+  * http title parser
+  * bot master must be identified with services (uses NickServ ACC)
 
 ## help
 
-visit ##ircb
+See [GoDoc](https://godoc.org/github.com/aerth/ircb/lib/ircb) for API reference and visit `##ircb` on Freenode for help
 
-### installation
+### usage
+
+for upgrade command to function as expected:
 
 ```
 #!/bin/sh
 PATH=$PATH:/usr/local/go/bin # go root
 NOWPWD=$PWD # ircb will land here
 go get -v -u -d github.com/aerth/ircb
-cd go/src/github.com/aerth/ircb && make && make install PREFIX=$NOWPWD
+cd go/src/github.com/aerth/ircb 
+go build
+./ircb
 ```
-
-### adding tools
-
-public can use tools in the ./tools directory
-only master can use tools in the ./mtools directory
-
-tools are shell scripts, dont need to be marked executable.
-ran from $PWD (not ./tools)
-
-
-
-
