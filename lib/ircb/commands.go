@@ -216,7 +216,17 @@ func CommandQuiet(c *Connection, irc *IRC) {
 	}
 	c.Log.Println("muted")
 }
-func CommandHelp(c *Connection, irc *IRC)      {}
+func CommandHelp(c *Connection, irc *IRC) {
+	if len(irc.Arguments) < 2 || irc.Arguments[0] == "" {
+		var commandlist string
+		for i := range CommandMap {
+			commandlist += i + " "
+		}
+		irc.Reply(c, "commands: "+commandlist)
+		return
+	}
+}
+
 func CommandAbout(c *Connection, irc *IRC)     {}
 func CommandLineCount(c *Connection, irc *IRC) {}
 func CommandDefine(c *Connection, irc *IRC) {
