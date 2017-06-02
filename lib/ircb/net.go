@@ -16,7 +16,7 @@ import (
 	"github.com/boltdb/bolt"
 )
 
-var version = "ircb v0.0.7"
+var version = "ircb v0.0.7+"
 
 type Connection struct {
 	Log         *log.Logger
@@ -178,17 +178,17 @@ func (c *Connection) readerwriter() error {
 		}
 
 		switch irc.Verb {
-               default: 
-c.Log.Println("new verb", irc.Verb)
-c.Log.Println(irc)
+		default:
+			c.Log.Println("new verb", irc.Verb)
+			c.Log.Println(irc)
 		case "NOTICE":
 			// :NickServ!NickServ@services. NOTICE mastername :mustangsally ACC 3
 			if irc.ReplyTo == "NickServ" && irc.Raw == fmt.Sprintf(formatauth, c.config.Nick, strings.Split(c.config.Master, ":")[0]) {
 				c.masterauth = time.Now()
 
 			} else {
-                               c.Log.Printf("NOTICE from %q: %q\n\tRaw:%q\n\n", irc.ReplyTo, irc.Message, irc.Raw)
-c.Log.Println(fmt.Sprintf(formatauth, c.config.Nick, strings.Split(c.config.Master, ":")[0]))
+				c.Log.Printf("NOTICE from %q: %q\n\tRaw:%q\n\n", irc.ReplyTo, irc.Message, irc.Raw)
+				c.Log.Println(fmt.Sprintf(formatauth, c.config.Nick, strings.Split(c.config.Master, ":")[0]))
 			}
 
 		case "MODE":
