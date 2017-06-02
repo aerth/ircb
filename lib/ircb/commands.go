@@ -310,7 +310,7 @@ func CommandMasterUpgrade(c *Connection, irc *IRC) {
 		c.Log.Println(irc, err)
 		return
 	}
-	upgrade := exec.Command("go", "build")
+	upgrade := exec.Command("make")
 
 	out, err = upgrade.CombinedOutput()
 	c.Log.Println(string(out))
