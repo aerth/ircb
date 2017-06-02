@@ -8,7 +8,7 @@ friendly channel bot
 
 ## help
 
-See [GoDoc](https://godoc.org/github.com/aerth/ircb/lib/ircb) for API reference and visit `##ircb` on Freenode for help
+See [docs](https://aerth.github.io/ircb/) and [GoDoc](https://godoc.org/github.com/aerth/ircb/lib/ircb) and visit `##ircb` on Freenode for help
 
 ### usage
 
