@@ -95,7 +95,16 @@ func privmsgMasterHandler(c *Connection, irc *IRC) bool {
 	}
 	mp := c.config.Master[i+1:]
 	if !strings.HasPrefix(irc.Message, mp) {
+
+		// switch prefix
+		if irc.Command == c.config.CommandPrefix && len(irc.Arguments) == 1 {
+			c.config.CommandPrefix = irc.Arguments[0]
+			c.SendMaster("New command prefix: %q", c.config.CommandPrefix)
+			return handled
+		}
+
 		c.Log.Println("not master command prefixed")
+
 		return nothandled
 	}
 	irc.Message = strings.TrimPrefix(irc.Message, mp)
