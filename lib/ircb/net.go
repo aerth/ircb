@@ -17,6 +17,10 @@ import (
 )
 
 var version = "ircb v0.0.7+"
+var ErrNoPluginSupport = fmt.Errorf("no plugin support")
+var ErrNoPlugin = fmt.Errorf("no plugin found")
+var ErrPluginInv = fmt.Errorf("invalid plugin")
+var LoadPlugin = func(s string) error { return ErrNoPluginSupport }
 
 type Connection struct {
 	Log         *log.Logger
