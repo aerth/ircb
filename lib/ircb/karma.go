@@ -23,7 +23,8 @@ func (c *Connection) ParseKarma(input string) (handled bool) {
 
 	if len(split) > 1 {
 		if strings.Contains(input, "thank") {
-			if i := strings.Index(input, ":"); i != -1 {
+			if i := strings.Index(input, ":"); i != -1 && i != 0 {
+				c.Log.Println("Karma:", input[0:i])
 				c.KarmaUp(input[0:i])
 				return true
 			}
