@@ -108,7 +108,7 @@ func (c *Connection) MasterCheck() {
 
 // SendMaster sends fmt to master
 func (c *Connection) SendMaster(format string, i ...interface{}) {
-	if strings.TrimSpace(s) == "" {
+	if strings.TrimSpace(format) == "" {
 		return
 	}
 	reply := IRC{
