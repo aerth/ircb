@@ -55,13 +55,13 @@ func TestTest(t *testing.T) {
 func TestParse(t *testing.T) {
 	c := NewTestConnection()
 	c.config.CommandPrefix = "!"
-	irc := c.Parse("foo PRIVMSG :bar")
+	irc := c.config.Parse("foo PRIVMSG :bar")
 	if irc.Verb != "PRIVMSG" {
 		t.Logf("expected verb: PRIVMSG, got %q", irc.Verb)
 		t.Fail()
 	}
 
-	irc = c.Parse("FOO")
+	irc = c.config.Parse("FOO")
 	if irc.Verb != "FOO" {
 		t.Logf("expected verb: FOO, got %q", irc.Verb)
 		t.Fail()
@@ -77,7 +77,7 @@ func TestParse(t *testing.T) {
 	}
 
 	for _, test := range testcases {
-		if out := c.Parse(test.input).Verb; out != test.expected {
+		if out := testconfig.Parse(test.input).Verb; out != test.expected {
 			t.Logf("wanted: %q", test.expected)
 			t.Logf("but got: %q", out)
 		}
@@ -92,7 +92,7 @@ func TestParse(t *testing.T) {
 	}
 
 	for _, test := range testcases {
-		if out := c.Parse(test.input).Message; out != test.expected {
+		if out := testconfig.Parse(test.input).Message; out != test.expected {
 			t.Logf("wanted: %q", test.expected)
 			t.Logf("but got: %q", out)
 		}
