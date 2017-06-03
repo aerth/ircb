@@ -30,7 +30,7 @@ func CommandSeen(c *ircb.Connection, irc *ircb.IRC) {
 	if len(irc.Arguments) == 0 {
 		stat, err := os.Stat(".log.txt")
 		if err == nil {
-			irc.Reply(c, strconv.FormatUint(uint64(stat.Size), 10))
+			irc.Reply(c, strconv.FormatUint(uint64(stat.Size()), 10))
 		}
 		return
 	}
