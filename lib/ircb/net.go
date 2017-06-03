@@ -56,7 +56,9 @@ func (config *Config) NewConnection() (*Connection, error) {
 	}
 
 	c.since = time.Now()
+	// for now, using default client.
 	c.HttpClient = http.DefaultClient
+
 	return c, nil
 }
 func (c *Connection) Connect() (err error) {
@@ -66,7 +68,12 @@ func (c *Connection) Connect() (err error) {
 
 		// dial direct
 		c.Log.Println("connecting...")
-		c.conn, err = net.Dial("tcp", c.config.Host)
+
+		if c.config.UseSSL {
+			c.conn, err = c.config.dialtls()
+		} else {
+			c.conn, err = net.Dial("tcp", c.config.Host)
+		}
 		if err != nil {
 			return err
 		}
@@ -74,6 +81,7 @@ func (c *Connection) Connect() (err error) {
 		if err != nil {
 			return err
 		}
+
 		c.Log.Println("connected.")
 		return c.readerwriter()
 	}
