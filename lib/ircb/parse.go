@@ -133,5 +133,5 @@ func (cfg Config) Parse(input string) *IRC {
 	return irc
 }
 
-const formatauth = "NickServ!NickServ@services. NOTICE %s :%s ACC 3"     // botname mastername
-const formatauth2 = "NickServ!NickServ@services. NOTICE %s :STATUS %s 1" // botname mastername
+const formatauth = "NickServ!NickServ@services. NOTICE %s :%s ACC 3"      // botname mastername
+const formatauth2 = "NickServ!NickServ@services. NOTICE %s :STATUS %s 1 " // botname mastername
