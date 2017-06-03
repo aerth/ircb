@@ -107,13 +107,13 @@ func (c *Connection) Write(b []byte) (n int, err error) {
 	if string(b[len(b)-2:]) != "\r\n" {
 		b = append(b, "\r\n"...)
 	}
-
-	if c.quiet {
-		c.Log.Println("MUTED:", string(b))
+	str := string(b)
+	if c.quiet && strings.Contains(str, "PRIVMSG") {
+		c.Log.Println("MUTED:", str)
 		return
 	}
 
-	c.Log.Println("SEND", string(b))
+	c.Log.Println("SEND", str)
 	return c.conn.Write(b)
 }
 
