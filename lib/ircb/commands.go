@@ -77,10 +77,7 @@ func privmsgMasterHandler(c *Connection, irc *IRC) bool {
 	if time.Now().Sub(c.masterauth) > 5*time.Minute {
 		c.Log.Println("bad master, need reauth")
 		c.MasterCheck()
-		<-time.After(time.Second)
-		if time.Now().Sub(c.masterauth) > 5*time.Minute {
-			return nothandled
-		}
+		return nothandled
 	}
 	c.Log.Println("got master message, parsing...")
 	i := strings.Index(c.config.Master, ":")

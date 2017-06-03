@@ -19,6 +19,7 @@ type Config struct {
 	EnableHistory bool
 	EnableMacros  bool
 	Database      string // path to boltdb (can be empty to use data.db)
+	AuthMode      int    // 0 ACC (freenode), 1 STATUS, -1 none
 }
 
 // NewDefaultConfig returns the default config, minimal changes would be Host,Nick,Master for typical usage.

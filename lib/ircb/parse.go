@@ -90,7 +90,7 @@ func Parse(input string) *IRC {
 		irc.Verb = s[1]
 		irc.To = s[2]
 		return irc
-       default:
+	default:
 		irc.ReplyTo = strings.Split(s[0], "!")[0]
 		irc.Channel = s[0]
 		irc.Verb = s[1]
@@ -112,7 +112,7 @@ func Parse(input string) *IRC {
 
 func (cfg Config) Parse(input string) *IRC {
 	irc := Parse(input)
-       fmt.Println("definitely parsing:",irc)
+	fmt.Println("definitely parsing:", irc)
 	// Add IsWhisper
 	irc.IsWhisper = irc.To == cfg.Nick
 
@@ -133,4 +133,5 @@ func (cfg Config) Parse(input string) *IRC {
 	return irc
 }
 
-const formatauth = "NickServ!NickServ@services. NOTICE %s :%s ACC 3" // botname mastername
+const formatauth = "NickServ!NickServ@services. NOTICE %s :%s ACC 3"     // botname mastername
+const formatauth2 = "NickServ!NickServ@services. NOTICE %s :STATUS %s 1" // botname mastername

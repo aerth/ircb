@@ -118,8 +118,19 @@ func (c *Connection) Write(b []byte) (n int, err error) {
 }
 
 func (c *Connection) MasterCheck() {
-	c.SendMaster("authenticating...")
-	c.Write([]byte("PRIVMSG NickServ :ACC " + strings.Split(c.config.Master, ":")[0]))
+	switch c.config.AuthMode {
+	case -1:
+		//
+	default:
+		c.SendMaster("authenticating...")
+		c.Write([]byte("PRIVMSG NickServ :ACC " + strings.Split(c.config.Master, ":")[0]))
+
+	case 1:
+		c.SendMaster("authenticating...")
+		c.Write([]byte("PRIVMSG NickServ :STATUS " + strings.Split(c.config.Master, ":")[0]))
+
+	}
+
 }
 
 // SendMaster sends fmt to master
@@ -223,8 +234,20 @@ func (c *Connection) readerwriter() error {
 			c.Log.Println(irc)
 		case "NOTICE":
 			// :NickServ!NickServ@services. NOTICE mastername :mustangsally ACC 3
-			if irc.ReplyTo == "NickServ" && irc.Raw == fmt.Sprintf(formatauth, c.config.Nick, strings.Split(c.config.Master, ":")[0]) {
-				c.masterauth = time.Now()
+			if irc.ReplyTo == "NickServ" {
+				switch c.config.AuthMode {
+				default:
+					if irc.Raw == fmt.Sprintf(formatauth, c.config.Nick, strings.Split(c.config.Master, ":")[0]) {
+						c.masterauth = time.Now()
+					}
+				case -1:
+					c.masterauth = time.Now()
+				case 1:
+					if irc.Raw == fmt.Sprintf(formatauth2, c.config.Nick, strings.Split(c.config.Master, ":")[0]) {
+						c.masterauth = time.Now()
+					}
+
+				}
 
 			} else {
 				c.Log.Printf("NOTICE from %q: %q\n\tRaw:%q\n\n", irc.ReplyTo, irc.Message, irc.Raw)
