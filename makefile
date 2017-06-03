@@ -1,4 +1,4 @@
 export CGO_ENABLED=1
 all:
-	make -C plugins && mv plugins/plugin.so plugin.so
-	go build -v -x
+	CGO_ENABLED=1 make -C plugins && mv plugins/plugin.so plugin.so	
+	CGO_ENABLED=1 go build -v -x

@@ -54,10 +54,14 @@ LoadConfig:
 		log.Fatal(err)
 	}
 	ircb.DefaultCommandMaps()
-	err = ircb.LoadPlugin("plugin.so")
+	publicmap, mastermap, err := ircb.LoadPlugin("plugin.so")
 
 	if err != nil && err != ircb.ErrNoPluginSupport {
 		log.Fatal(err)
+	}
+
+	if err != nil {
+		ircb.CommandMap, ircb.MasterMap = publicmap, mastermap
 	}
 	err = conn.Connect()
 

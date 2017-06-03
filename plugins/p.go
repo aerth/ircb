@@ -1,18 +1,30 @@
 package main
 
-import ircb "github.com/aerth/ircb/lib/ircb"
+import (
+	"time"
+
+	ircb "github.com/aerth/ircb/lib/ircb"
+)
 
 func main() {
 	println("plugin main")
 }
-func Init(c map[string]ircb.Command, m map[string]ircb.Command) error {
-	c["test"] = CommandTest
+func Init(c map[string]ircb.Command, m map[string]ircb.Command) (map[string]ircb.Command, map[string]ircb.Command, error) {
+	if c == nil {
+		c = make(map[string]ircb.Command)
+
+	}
+
+	if m == nil {
+		m = make(map[string]ircb.Command)
+	}
+	c["time"] = CommandTime
 	m["update-plugins"] = MasterCommandReloadPlugin
-	return nil
+	return c, m, nil
 }
 
-func CommandTest(c *ircb.Connection, irc *ircb.IRC) {
-	irc.Reply(c, "plugins work")
+func CommandTime(c *ircb.Connection, irc *ircb.IRC) {
+	irc.Reply(c, time.Now().String())
 }
 
 func MasterCommandReloadPlugin(c *ircb.Connection, irc *ircb.IRC) {

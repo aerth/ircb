@@ -20,7 +20,10 @@ var version = "ircb v0.0.7+"
 var ErrNoPluginSupport = fmt.Errorf("no plugin support")
 var ErrNoPlugin = fmt.Errorf("no plugin found")
 var ErrPluginInv = fmt.Errorf("invalid plugin")
-var LoadPlugin = func(s string) error { return ErrNoPluginSupport }
+
+var LoadPlugin = func(s string) (public map[string]Command, master map[string]Command, err error) {
+	return nil, nil, ErrNoPluginSupport
+}
 
 type Connection struct {
 	Log         *log.Logger
