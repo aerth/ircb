@@ -6,7 +6,7 @@ import (
 
 func (cfg *Config) dialtls() (*tls.Conn, error) {
 
-	return tls.Dial("tls", "mail.google.com:443", &tls.Config{
+	return tls.Dial("tcp", cfg.Host, &tls.Config{
 		InsecureSkipVerify: cfg.InvalidSSL,
 	})
 }
