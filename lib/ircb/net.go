@@ -107,6 +107,7 @@ func (c *Connection) Write(b []byte) (n int, err error) {
 }
 
 func (c *Connection) MasterCheck() {
+	c.SendMaster("authenticating...")
 	c.Write([]byte("PRIVMSG NickServ :ACC " + strings.Split(c.config.Master, ":")[0]))
 }
 
@@ -167,6 +168,9 @@ func (c *Connection) readerwriter() error {
 		return err
 	}
 	defer logfile.Close()
+	defer c.Log.SetOutput(os.Stderr)
+	mw := io.MultiWriter(os.Stderr, logfile)
+	c.Log.SetOutput(mw)
 	logfile.Write([]byte(fmt.Sprintf("log started: %s\n", time.Now().String())))
 	logfile.Sync()
 	c.Log.Println("reading from net")
@@ -177,9 +181,8 @@ func (c *Connection) readerwriter() error {
 		if err != nil {
 			return err
 		}
-		logfile.Write([]byte(fmt.Sprintf("%s %q\n", time.Now().String(), msg)))
-		logfile.Sync()
 		c.Log.Printf("read: %q", msg)
+		logfile.Sync()
 
 		// handle PING
 		if strings.HasPrefix(msg, "PING") {
