@@ -212,7 +212,7 @@ func CommandHostUptime(c *Connection, irc *IRC) {
 	}
 }
 func CommandEcho(c *Connection, irc *IRC) {
-	irc.Reply(c, fmt.Sprint(strings.Join(irc.Arguments), " "))
+	irc.Reply(c, fmt.Sprint(strings.Join(irc.Arguments, " ")))
 }
 func CommandQuiet(c *Connection, irc *IRC) {
 	c.quiet = !c.quiet
