@@ -28,7 +28,9 @@ func CommandTime(c *ircb.Connection, irc *ircb.IRC) {
 }
 
 func MasterCommandReloadPlugin(c *ircb.Connection, irc *ircb.IRC) {
-	err := ircb.LoadPlugin("plugin.so")
+	var err error
+	ircb.CommandMap, ircb.MasterMap, err = ircb.LoadPlugin("plugin.so")
+
 	if err != nil {
 		c.SendMaster(err.Error())
 	}
