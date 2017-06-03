@@ -243,7 +243,7 @@ func (c *Connection) readerwriter() error {
 				case -1:
 					c.masterauth = time.Now()
 				case 1:
-					if irc.Raw == fmt.Sprintf(formatauth2, c.config.Nick, strings.Split(c.config.Master, ":")[0]) {
+					if irc.Message == fmt.Sprintf(formatauth2, strings.Split(c.config.Master, ":")[0]) {
 						c.masterauth = time.Now()
 					}
 
