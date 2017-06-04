@@ -10,7 +10,7 @@ rebuild:
 	test -f config.json || ( cp -nv ${IRCB}/default.json config.json && echo "new default config" )
 plugin:
 	CGO_ENABLED=1 make -C ${IRCB}/plugins/
-	mv -nv ${IRCB}/plugins/plugin.so plugin.so     
+	mv -v ${IRCB}/plugins/plugin.so plugin.so     
 
 all: plugin rebuild
 	@echo complete
