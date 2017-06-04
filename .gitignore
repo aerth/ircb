@@ -1,4 +1,5 @@
-history.db
-karma.db
+./bolt.db
 ./ircb
-.config
+./config.json
+./plugin.so
+
