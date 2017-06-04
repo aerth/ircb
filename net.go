@@ -21,6 +21,7 @@ var ErrNoPluginSupport = fmt.Errorf("no plugin support")
 var ErrNoPlugin = fmt.Errorf("no plugin found")
 var ErrPluginInv = fmt.Errorf("invalid plugin")
 
+// LoadPlugin loads the named plugin file
 var LoadPlugin = func(s string) (public map[string]Command, master map[string]Command, err error) {
 	return nil, nil, ErrNoPluginSupport
 }
@@ -120,14 +121,18 @@ func (c *Connection) Write(b []byte) (n int, err error) {
 func (c *Connection) MasterCheck() {
 	switch c.config.AuthMode {
 	case -1:
-		//
+		// no auth mode
 	default:
-		c.SendMaster("authenticating...")
-		c.Write([]byte("PRIVMSG NickServ :ACC " + strings.Split(c.config.Master, ":")[0]))
+		_, err := c.conn.Write([]byte("PRIVMSG NickServ :ACC " + strings.Split(c.config.Master, ":")[0] + "\r\n"))
+		if err != nil {
+			c.Log.Println(err)
+		}
 
 	case 1:
-		c.SendMaster("authenticating...")
-		c.Write([]byte("PRIVMSG NickServ :STATUS " + strings.Split(c.config.Master, ":")[0]))
+		_, err := c.conn.Write([]byte("PRIVMSG NickServ :STATUS " + strings.Split(c.config.Master, ":")[0] + "\r\n"))
+		if err != nil {
+			c.Log.Println(err)
+		}
 
 	}
 
