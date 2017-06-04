@@ -14,20 +14,12 @@ See [docs](https://aerth.github.io/ircb/) and [GoDoc](https://godoc.org/github.c
 
 ### usage
 
-for upgrade command to function as expected:
-
-  * 'makefile' should exist next to 'ircb' executable.
-  * running 'make' should output new executable 'ircb' or return non-zero error
-
-quick setup:
+quick setup (requires Go to compile):
 
 ```
 
-go get -d -v github.com/aerth/ircb
-cd $(go env GOPATH)/src/github.com/aerth/ircb
+curl https://raw.githubusercontent.com/aerth/ircb/master/makefile > makefile
 make
-cp default.json config.json
-vim config.json
 ./ircb
 
 ```
