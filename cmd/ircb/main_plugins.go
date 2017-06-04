@@ -16,20 +16,19 @@ func init() {
 	ircb.LoadPlugin = loadPlugin
 }
 
-func loadPlugin(name string) (map[string]ircb.Command, map[string]ircb.Command, error) {
+func loadPlugin(c *ircb.Connection, name string) error {
 	p, err := plugin.Open(name)
 	if err != nil {
 		if strings.Contains(err.Error(), "no such") {
-			return nil, nil, ircb.ErrNoPlugin
+			return ircb.ErrNoPlugin
 		}
-		return nil, nil, err
+		return err
 	}
-	println("loading plugin:", name)
+	c.Log.Println("loading plugin:", name)
 	initfn, err := p.Lookup("Init")
-	fn, ok := initfn.(func(map[string]ircb.Command, map[string]ircb.Command) (map[string]ircb.Command,
-		map[string]ircb.Command, error))
+	fn, ok := initfn.(ircb.PluginInitFunc)
 	if !ok {
-		return nil, nil, ircb.ErrPluginInv
+		return ircb.ErrPluginInv
 	}
-	return fn(ircb.CommandMap, ircb.MasterMap)
+	return fn(c)
 }

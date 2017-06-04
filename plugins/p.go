@@ -11,18 +11,18 @@ import (
 
 func main() {}
 
-func Init(c map[string]ircb.Command, m map[string]ircb.Command) (map[string]ircb.Command, map[string]ircb.Command, error) {
-	if c == nil {
-		c = make(map[string]ircb.Command)
+func Init(c *ircb.Connection) error {
+	if c.CommandMap == nil {
+		c.CommandMap = make(map[string]ircb.Command)
 
 	}
 
-	if m == nil {
-		m = make(map[string]ircb.Command)
+	if c.MasterMap == nil {
+		c.MasterMap = make(map[string]ircb.Command)
 	}
-	c["time"] = CommandTime
-	m["update-plugins"] = MasterCommandReloadPlugin
-	return c, m, nil
+	c.CommandMap["time"] = CommandTime
+	c.MasterMap["update-plugins"] = MasterCommandReloadPlugin
+	return nil
 }
 
 func CommandTime(c *ircb.Connection, irc *ircb.IRC) {
@@ -58,11 +58,9 @@ func CommandSeen(c *ircb.Connection, irc *ircb.IRC) {
 }
 
 func MasterCommandReloadPlugin(c *ircb.Connection, irc *ircb.IRC) {
-	var err error
-	ircb.CommandMap, ircb.MasterMap, err = ircb.LoadPlugin("plugin.so")
-
+	err := ircb.LoadPlugin(c, "plugin.so")
 	if err != nil {
-		c.SendMaster(err.Error())
+		c.SendMaster("error reloading plugins: %v", err)
 	}
 	irc.Reply(c, "plugins reloaded")
 }

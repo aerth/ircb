@@ -11,23 +11,6 @@ import (
 const handled = true
 const nothandled = false
 
-// MasterMap is all available master @commands, customize before connecting.
-var MasterMap map[string]Command
-
-// CommandMap is all available public !commands, customize before connecting.
-var CommandMap map[string]Command
-
-func DefaultCommandMaps() {
-
-	// load default commands
-	if MasterMap == nil || len(MasterMap) == 0 {
-		MasterMap = DefaultMasterMap()
-	}
-	if CommandMap == nil || len(MasterMap) == 0 {
-		CommandMap = DefaultCommandMap()
-	}
-}
-
 // Command is what executes using a parsed IRC message
 // irc message '!echo arg1 arg2' gets parsed as:
 // 	'irc.Command = echo', 'irc.CommandArguments = []string{"arg1","arg2"}
@@ -46,7 +29,6 @@ func DefaultCommandMaps() {
 //	ircb.MasterMap["stat"] = func(c *Connection, irc.*IRC){
 //		irc.ReplyUser(c, fmt.Sprintf("lines received: %v", c.lines))
 //	}
-
 // Reply with irc.ReplyUser (for /msg reply) or irc.Reply (for channel)
 type Command func(c *Connection, irc *IRC)
 
@@ -114,7 +96,7 @@ func privmsgMasterHandler(c *Connection, irc *IRC) bool {
 	c.Log.Printf("master command request: %s %s", irc.Command, irc.Arguments)
 	if irc.Command != "" {
 		c.Log.Println("trying master command:", irc.Command)
-		if fn, ok := MasterMap[irc.Command]; ok {
+		if fn, ok := c.MasterMap[irc.Command]; ok {
 			c.Log.Printf("master command found: %q", irc.Command)
 			fn(c, irc)
 			return handled
@@ -125,16 +107,16 @@ func privmsgMasterHandler(c *Connection, irc *IRC) bool {
 
 }
 
-func GetPublicCommand(word string) Command {
-	fn, ok := CommandMap[word]
+func (c *Connection) GetPublicCommand(word string) Command {
+	fn, ok := c.CommandMap[word]
 	if !ok {
 		return nilcommand
 	}
 	return fn
 }
 
-func IsPublicCommand(word string) bool {
-	_, ok := CommandMap[word]
+func (c *Connection) IsPublicCommand(word string) bool {
+	_, ok := c.CommandMap[word]
 	return ok
 }
 func privmsgHandler(c *Connection, irc *IRC) {
@@ -146,7 +128,7 @@ func privmsgHandler(c *Connection, irc *IRC) {
 	}
 
 	if irc.Command != "" {
-		if fn, ok := CommandMap[irc.Command]; ok {
+		if fn, ok := c.CommandMap[irc.Command]; ok {
 			c.Log.Printf("command found: %q", irc.Command)
 			fn(c, irc)
 			return
@@ -228,7 +210,7 @@ func CommandQuiet(c *Connection, irc *IRC) {
 func CommandHelp(c *Connection, irc *IRC) {
 	if len(irc.Arguments) < 2 || irc.Arguments[0] == "" {
 		var commandlist string
-		for i := range CommandMap {
+		for i := range c.CommandMap {
 			commandlist += i + " "
 		}
 		irc.Reply(c, "commands: "+commandlist)
@@ -249,7 +231,7 @@ func CommandDefine(c *Connection, irc *IRC) {
 		return
 	}
 	action := irc.Arguments[0]
-	if _, ok := CommandMap[action]; ok {
+	if _, ok := c.CommandMap[action]; ok {
 		irc.Reply(c, fmt.Sprintf("already defined as command: %q", action))
 		return
 	}

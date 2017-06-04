@@ -21,26 +21,30 @@ var ErrNoPluginSupport = fmt.Errorf("no plugin support")
 var ErrNoPlugin = fmt.Errorf("no plugin found")
 var ErrPluginInv = fmt.Errorf("invalid plugin")
 
+// PluginInitFunc for plugins
+type PluginInitFunc func(c *Connection) error
+
 // LoadPlugin loads the named plugin file
-var LoadPlugin = func(s string) (public map[string]Command, master map[string]Command, err error) {
-	return nil, nil, ErrNoPluginSupport
+var LoadPlugin = func(c *Connection, s string) error {
+	return ErrNoPluginSupport
 }
 
 type Connection struct {
-	Log         *log.Logger
-	HttpClient  *http.Client
-	config      *Config
-	boltdb      *bolt.DB
-	conn        io.ReadWriteCloser
-	since       time.Time // since connected to server
-	masterauth  time.Time // auth and auth timeout
-	reader      *bufio.Reader
-	definitions map[string]string
-	karma       map[string]int // map[nick]level
-	karmalock   sync.Mutex
-	connected   bool
-	joined      bool
-	quiet       bool
+	Log        *log.Logger
+	HttpClient *http.Client
+	config     *Config
+	boltdb     *bolt.DB
+	conn       io.ReadWriteCloser
+	since      time.Time // since connected to server
+	masterauth time.Time // auth and auth timeout
+	reader     *bufio.Reader
+	CommandMap map[string]Command
+	MasterMap  map[string]Command
+	karma      map[string]int // map[nick]level
+	karmalock  sync.Mutex
+	connected  bool
+	joined     bool
+	quiet      bool
 }
 
 func (config *Config) NewConnection() (*Connection, error) {
@@ -59,7 +63,8 @@ func (config *Config) NewConnection() (*Connection, error) {
 	c.since = time.Now()
 	// for now, using default client.
 	c.HttpClient = http.DefaultClient
-
+	c.CommandMap = DefaultCommandMap()
+	c.MasterMap = DefaultMasterMap()
 	return c, nil
 }
 func (c *Connection) Connect() (err error) {
@@ -69,7 +74,6 @@ func (c *Connection) Connect() (err error) {
 			return err
 		}
 	}
-	DefaultCommandMaps()
 	if !c.connected {
 		c.connected = true
 
