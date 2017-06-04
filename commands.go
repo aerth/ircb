@@ -174,14 +174,11 @@ func privmsgHandler(c *Connection, irc *IRC) {
 
 func DefaultCommandMap() map[string]Command {
 	m := make(map[string]Command)
-	m["q"] = CommandQuiet
+	m["quiet"] = CommandQuiet
 	m["up"] = CommandUptime
 	m["uptime"] = CommandHostUptime
 	m["help"] = CommandHelp
 	m["about"] = CommandAbout
-	m["lines"] = CommandLineCount
-	m["line"] = CommandLine
-	m["history"] = CommandHistorySearch
 	m["echo"] = CommandEcho
 	m["karma"] = KarmaShow
 	m["define"] = CommandDefine
@@ -193,6 +190,7 @@ func DefaultMasterMap() map[string]Command {
 	m["do"] = CommandMasterDo
 	m["upgrade"] = CommandMasterUpgrade
 	m["q"] = CommandMasterQuit
+	m["quit"] = CommandMasterQuit
 	m["set"] = CommandMasterSet
 	return m
 }
@@ -207,9 +205,11 @@ func CommandHostUptime(c *Connection, irc *IRC) {
 	out, err := uptime.CombinedOutput()
 	if err != nil {
 		c.Log.Println(irc, err)
+		c.SendMaster("%s", err)
 	}
+
 	output := strings.Split(string(out), "\n")[0]
-	if output != "" {
+	if strings.TrimSpace(output) != "" {
 		irc.Reply(c, output)
 	}
 }
@@ -240,6 +240,9 @@ func CommandAbout(c *Connection, irc *IRC) {
 }
 func CommandLineCount(c *Connection, irc *IRC) {}
 func CommandDefine(c *Connection, irc *IRC) {
+	if !c.config.Define {
+		return
+	}
 	if len(irc.Arguments) < 2 || irc.Arguments[0] == "" {
 		irc.Reply(c, "usage: define [word] [text]")
 		return
@@ -275,7 +278,7 @@ func CommandMasterSet(c *Connection, irc *IRC) {
 	value := irc.Arguments[1]
 	switch option {
 	default:
-		irc.Reply(c, `usage: set optionname on|off`)
+		irc.Reply(c, `no option like that`)
 		return
 	case "links":
 		switch value {
@@ -283,12 +286,32 @@ func CommandMasterSet(c *Connection, irc *IRC) {
 			c.config.ParseLinks = true
 		case "off":
 			c.config.ParseLinks = false
-
 		default:
 			irc.Reply(c, `usage: set optionname on|off`)
-
 			return
 		}
+	case "define":
+		switch value {
+		case "on":
+			c.config.Define = true
+		case "off":
+			c.config.Define = false
+		default:
+			irc.Reply(c, `usage: set optionname on|off`)
+			return
+		}
+
+	case "history":
+		switch value {
+		case "on":
+			c.config.History = true
+		case "off":
+			c.config.History = false
+		default:
+			irc.Reply(c, `usage: set optionname on|off`)
+			return
+		}
+
 	}
 
 }

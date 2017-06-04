@@ -13,33 +13,30 @@ type Config struct {
 	Channels      string // comma separated channels to autojoin
 	UseSSL        bool
 	InvalidSSL    bool
-	EnableTools   bool
-	EnableKarma   bool
 	ParseLinks    bool
-	EnableHistory bool
-	EnableMacros  bool
+	Define        bool
 	Verbose       bool
-	Diamond       bool
-	Database      string // path to boltdb (can be empty to use data.db)
+	Karma         bool
+	History       bool
+	Diamond       bool   // socket for console control (experimental)
+	Database      string // path to boltdb (can be empty to use bolt.db)
 	AuthMode      int    // 0 ACC (freenode), 1 STATUS, -1 none
 }
 
 // NewDefaultConfig returns the default config, minimal changes would be Host,Nick,Master for typical usage.
 func NewDefaultConfig() *Config {
 	config := new(Config)
-	config.Host = "localhost:6667"
+	config.Host = "chat.freenode.net:6697"
 	config.Nick = "mustangsally"
-	config.Master = "aerth"
+	config.Master = "aerth:$"
 	config.CommandPrefix = "!"
-	config.Channels = "##ircb"
-	config.UseSSL = false
+	config.Channels = "##ircb,##ircb"
+	config.UseSSL = true
 	config.InvalidSSL = false
-	config.EnableTools = true
-	config.EnableKarma = true
-	config.EnableHistory = true
+	config.Karma = true
+	config.History = true
 	config.ParseLinks = false
-
-	config.EnableMacros = true
+	config.Define = true
 	return config
 }
 

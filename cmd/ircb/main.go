@@ -22,8 +22,7 @@ var (
 	flagcommandprefix  = flag.String("c", "!", "public command prefix")
 	flagssl            = flag.Bool("ssl", false, "use ssl to connect")
 	flaginvalidssl     = flag.Bool("x", false, "accept invalid tls certificates")
-	flagdisabletools   = flag.Bool("notools", false, "dont use toolkit system")
-	flagdisablemacros  = flag.Bool("nomacros", false, "dont use macros system")
+	flagdisablemacros  = flag.Bool("nodefine", false, "dont use definition system")
 	flagdisablehistory = flag.Bool("nohistory", false, "dont use history system")
 	flagdisablekarma   = flag.Bool("nokarma", false, "dont use karma system")
 )
@@ -86,10 +85,9 @@ func buildconfig() *ircb.Config {
 	config.UseSSL = *flagssl
 	config.InvalidSSL = *flaginvalidssl
 	config.CommandPrefix = "!"
-	config.EnableTools = (*flagdisabletools == false)
-	config.EnableKarma = (*flagdisablekarma == false)
-	config.EnableHistory = (*flagdisablehistory == false)
-	config.EnableMacros = (*flagdisablemacros == false)
+	config.Karma = (*flagdisablekarma == false)
+	config.History = (*flagdisablehistory == false)
+	config.Define = (*flagdisablemacros == false)
 
 	if master := os.Getenv("MASTER"); master != "" {
 		config.Master = master
