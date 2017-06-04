@@ -22,7 +22,7 @@ var ErrNoPlugin = fmt.Errorf("no plugin found")
 var ErrPluginInv = fmt.Errorf("invalid plugin")
 
 // PluginInitFunc for plugins
-type PluginInitFunc func(c *Connection) error
+type PluginInitFunc (func(c *Connection) error)
 
 // LoadPlugin loads the named plugin file
 var LoadPlugin = func(c *Connection, s string) error {

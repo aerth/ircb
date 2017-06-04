@@ -32,7 +32,7 @@ func loadPlugin(c *ircb.Connection, name string) error {
 	}
 	c.Log.Println("loading plugin:", name)
 	initfn, err := p.Lookup("Init")
-	fn, ok := initfn.(ircb.PluginInitFunc)
+	fn, ok := initfn.(func(c *ircb.Connection) error)
 	if !ok {
 		return ircb.ErrPluginInv
 	}
