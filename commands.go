@@ -59,6 +59,7 @@ func verbIntHandler(c *Connection, irc *IRC) bool {
 	switch verb {
 	default: // unknown numerical verb
 		c.Log.Printf("new verb: %q", irc.Verb)
+	case 372, 001, 002, 003, 004, 005, 006, 007:
 	case 221:
 		c.Log.Printf("new mode: %q", irc.Message)
 	case 433:

@@ -112,7 +112,9 @@ func Parse(input string) *IRC {
 
 func (cfg Config) Parse(input string) *IRC {
 	irc := Parse(input)
-	fmt.Println("definitely parsing:", irc)
+	if cfg.Verbose {
+		fmt.Println("definitely parsing:", irc)
+	}
 	// Add IsWhisper
 	irc.IsWhisper = irc.To == cfg.Nick
 

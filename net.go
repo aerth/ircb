@@ -63,6 +63,10 @@ func (config *Config) NewConnection() (*Connection, error) {
 	return c, nil
 }
 func (c *Connection) Connect() (err error) {
+	err = initializeDiamond(c)
+	if err != nil {
+		return err
+	}
 	DefaultCommandMaps()
 	if !c.connected {
 		c.connected = true
@@ -242,7 +246,9 @@ func (c *Connection) readerwriter() error {
 		switch irc.Verb {
 		default:
 			c.Log.Println("new verb", irc.Verb)
-			c.Log.Println(irc)
+			if c.config.Verbose {
+				c.Log.Println(irc)
+			}
 		case "NOTICE":
 			// :NickServ!NickServ@services. NOTICE mastername :mustangsally ACC 3
 			switch irc.ReplyTo {
