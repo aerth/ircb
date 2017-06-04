@@ -8,7 +8,13 @@ rebuild:
 	@echo building irc client
 	CGO_ENABLED=1 go build -o ircb github.com/aerth/ircb/cmd/ircb
 	test -f config.json || ( cp -nv ${IRCB}/default.json config.json && echo "new default config" )
+plugin:
+	CGO_ENABLED=1 make -C ${IRCB}/plugins/
+	mv -nv ${IRCB}/plugins/plugin.so plugin.so     
 
+all: plugin rebuild
+	@echo complete
+	
 run:
 	test -x ./ircb || ${MAKE} rebuild
 	test -x ./ircb || exit 111
