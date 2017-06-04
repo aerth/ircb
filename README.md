@@ -14,12 +14,16 @@ See [docs](https://aerth.github.io/ircb/) and [GoDoc](https://godoc.org/github.c
 
 ### usage
 
-quick setup (requires Go to compile):
+quick setup (requires [Go](https://golang.org) to compile):
+
+1. log in to the user you would like to use ircb with,
+2. change directory to the path you would like ircb to live (can be empty)
 
 ```
 
 curl https://raw.githubusercontent.com/aerth/ircb/master/makefile > makefile
 make
+vim config.json
 ./ircb
 
 ```
