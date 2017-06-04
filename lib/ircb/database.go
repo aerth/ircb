@@ -15,7 +15,7 @@ var dbhistory = []byte("history")
 
 // opendb, make buckets if not exist
 func loadDatabase(filename string) (*bolt.DB, error) {
-	db, err := bolt.Open(filename, 0600, &bolt.Options{Timeout: 1 * time.Second})
+	db, err := bolt.Open(filename, 0600, &bolt.Options{Timeout: 3 * time.Second})
 	if err != nil {
 		return nil, err
 	}
@@ -27,15 +27,21 @@ func loadDatabase(filename string) (*bolt.DB, error) {
 	defer tx.Rollback()
 
 	// make karma bucket
-	_, err = tx.CreateBucketIfNotExists([]byte("karma"))
+	_, err = tx.CreateBucketIfNotExists(dbkarma)
 	if err != nil {
 		return nil, err
 	}
 	// make dictionary bucket
-	_, err = tx.CreateBucketIfNotExists([]byte("dictionary"))
+	_, err = tx.CreateBucketIfNotExists(dbdef)
 	if err != nil {
 		return nil, err
 	}
+	// make history bucket
+	_, err = tx.CreateBucketIfNotExists(dbhistory)
+	if err != nil {
+		return nil, err
+	}
+
 	// write db
 	if err = tx.Commit(); err != nil {
 		return nil, err
