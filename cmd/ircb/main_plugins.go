@@ -6,7 +6,7 @@ import (
 	"plugin"
 	"strings"
 
-	"github.com/aerth/ircb/lib/ircb"
+	"github.com/aerth/ircb"
 )
 
 // // No C code needed, plugins need CGO_ENABLED=1

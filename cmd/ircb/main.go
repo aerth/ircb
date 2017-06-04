@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/aerth/ircb/lib/ircb"
+	"github.com/aerth/ircb"
 )
 
 func init() {

@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	ircb "github.com/aerth/ircb/lib/ircb"
+	"github.com/aerth/ircb"
 )
 
 func main() {}
