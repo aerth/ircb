@@ -18,6 +18,7 @@ type Config struct {
 	ParseLinks    bool
 	EnableHistory bool
 	EnableMacros  bool
+	Verbose       bool
 	Database      string // path to boltdb (can be empty to use data.db)
 	AuthMode      int    // 0 ACC (freenode), 1 STATUS, -1 none
 }

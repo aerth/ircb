@@ -110,11 +110,15 @@ func (c *Connection) Write(b []byte) (n int, err error) {
 	}
 	str := string(b)
 	if c.quiet && strings.Contains(str, "PRIVMSG") {
-		c.Log.Println("MUTED:", str)
+		if c.config.Verbose {
+			c.Log.Println("MUTED:", str)
+		}
 		return
 	}
 
-	c.Log.Println("SEND", str)
+	if c.config.Verbose {
+		c.Log.Println("SEND", str)
+	}
 	return c.conn.Write(b)
 }
 
@@ -208,8 +212,10 @@ func (c *Connection) readerwriter() error {
 		if err != nil {
 			return err
 		}
-		c.Log.Printf("read: %q", msg)
-		logfile.Sync()
+		if c.config.Verbose {
+			c.Log.Printf("read: %q", msg)
+			logfile.Sync()
+		}
 
 		// handle PING
 		if strings.HasPrefix(msg, "PING") {
@@ -239,7 +245,8 @@ func (c *Connection) readerwriter() error {
 			c.Log.Println(irc)
 		case "NOTICE":
 			// :NickServ!NickServ@services. NOTICE mastername :mustangsally ACC 3
-			if irc.ReplyTo == "NickServ" {
+			switch irc.ReplyTo {
+			case "NickServ":
 				switch c.config.AuthMode {
 				default:
 					if irc.Raw == fmt.Sprintf(formatauth, c.config.Nick, strings.Split(c.config.Master, ":")[0]) {
@@ -254,7 +261,8 @@ func (c *Connection) readerwriter() error {
 
 				}
 
-			} else {
+			default:
+
 				c.Log.Printf("NOTICE from %q: %q\n\tRaw:%q\n\n", irc.ReplyTo, irc.Message, irc.Raw)
 				c.Log.Println(fmt.Sprintf(formatauth, c.config.Nick, strings.Split(c.config.Master, ":")[0]))
 			}
