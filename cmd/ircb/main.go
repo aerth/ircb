@@ -53,8 +53,7 @@ LoadConfig:
 		log.Fatal(err)
 	}
 	err = ircb.LoadPlugin(conn, "plugin.so")
-
-	if err != nil && err != ircb.ErrNoPluginSupport {
+	if err != nil && err != ircb.ErrNoPluginSupport && err != ircb.ErrNoPlugin {
 		log.Fatal(err)
 	}
 
