@@ -19,6 +19,7 @@ type Config struct {
 	EnableHistory bool
 	EnableMacros  bool
 	Verbose       bool
+	Diamond       bool
 	Database      string // path to boltdb (can be empty to use data.db)
 	AuthMode      int    // 0 ACC (freenode), 1 STATUS, -1 none
 }

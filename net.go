@@ -63,9 +63,11 @@ func (config *Config) NewConnection() (*Connection, error) {
 	return c, nil
 }
 func (c *Connection) Connect() (err error) {
-	err = initializeDiamond(c)
-	if err != nil {
-		return err
+	if c.config.Diamond {
+		err = initializeDiamond(c)
+		if err != nil {
+			return err
+		}
 	}
 	DefaultCommandMaps()
 	if !c.connected {
