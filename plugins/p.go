@@ -9,6 +9,8 @@ import (
 	ircb "github.com/aerth/ircb/lib/ircb"
 )
 
+func main() {}
+
 func Init(c map[string]ircb.Command, m map[string]ircb.Command) (map[string]ircb.Command, map[string]ircb.Command, error) {
 	if c == nil {
 		c = make(map[string]ircb.Command)
