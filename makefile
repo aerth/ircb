@@ -6,7 +6,9 @@ rebuild:
 	test -f plugin.so && echo plugin already exists || \
 		mv -nv ${IRCB}/plugins/plugin.so plugin.so	
 	@echo building irc client
+	CGO_ENABLED=1 go get -v -d github.com/aerth/ircb/cmd/ircb
 	CGO_ENABLED=1 go build -o ircb github.com/aerth/ircb/cmd/ircb
+
 	test -f config.json || ( cp -nv ${IRCB}/default.json config.json && echo "new default config" )
 plugin:
 	CGO_ENABLED=1 make -C ${IRCB}/plugins/
