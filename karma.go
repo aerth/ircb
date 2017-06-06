@@ -4,7 +4,7 @@ import (
 	"strings"
 )
 
-func KarmaShow(c *Connection, irc *IRC) {
+func commandKarma(c *Connection, irc *IRC) {
 	if len(irc.Arguments) != 1 {
 		irc.Reply(c, c.KarmaShow(irc.ReplyTo))
 		return
@@ -12,7 +12,7 @@ func KarmaShow(c *Connection, irc *IRC) {
 
 	irc.Reply(c, c.KarmaShow(irc.Arguments[0]))
 }
-func (c *Connection) ParseKarma(input string) (handled bool) {
+func (c *Connection) parseKarma(input string) (handled bool) {
 	handled = false
 	split := strings.Split(input, " ")
 	if len(split) < 1 {

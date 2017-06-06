@@ -62,23 +62,30 @@ func verbIntHandler(c *Connection, irc *IRC) bool {
 
 }
 
-func (c *Connection) CommandMasterAdd(name string, fn Command) {
+// AddMasterCommand adds a new master command, named 'name' to the MasterMap
+func (c *Connection) AddMasterCommand(name string, fn Command) {
 	c.maplock.Lock()
 	defer c.maplock.Unlock()
 	c.MasterMap[name] = fn
 	return
 }
-func (c *Connection) CommandAdd(name string, fn Command) {
+
+// AddCommand adds a new public command, named 'name' to the CommandMap
+func (c *Connection) AddCommand(name string, fn Command) {
 	c.maplock.Lock()
 	defer c.maplock.Unlock()
 	c.CommandMap[name] = fn
 }
-func (c *Connection) CommandMasterRemove(name string) {
+
+// AddCommand adds a new public command, named 'name' to the CommandMap
+func (c *Connection) RemoveMasterCommand(name string) {
 	c.maplock.Lock()
 	defer c.maplock.Unlock()
 	delete(c.MasterMap, name)
 }
-func (c *Connection) CommandRemove(name string) {
+
+// RemoveCommand removes a public command, named 'name' to the CommandMap
+func (c *Connection) RemoveCommand(name string) {
 	c.maplock.Lock()
 	defer c.maplock.Unlock()
 	delete(c.CommandMap, name)
@@ -154,7 +161,7 @@ func (c *Connection) IsPublicCommand(word string) bool {
 func privmsgHandler(c *Connection, irc *IRC) {
 
 	// is karma
-	if strings.HasPrefix(irc.To, "#") && c.ParseKarma(irc.Message) {
+	if strings.HasPrefix(irc.To, "#") && c.parseKarma(irc.Message) {
 		return
 
 	}
@@ -189,35 +196,35 @@ func privmsgHandler(c *Connection, irc *IRC) {
 
 func DefaultCommandMap() map[string]Command {
 	m := make(map[string]Command)
-	m["quiet"] = CommandQuiet
-	m["up"] = CommandUptime
-	m["uptime"] = CommandHostUptime
-	m["help"] = CommandHelp
-	m["about"] = CommandAbout
-	m["echo"] = CommandEcho
-	m["karma"] = KarmaShow
-	m["define"] = CommandDefine
+	m["quiet"] = commandQuiet
+	m["up"] = commandUptime
+	m["uptime"] = commandHostUptime
+	m["help"] = commandHelp
+	m["about"] = commandAbout
+	m["echo"] = commandEcho
+	m["karma"] = commandKarma
+	m["define"] = commandDefine
 	return m
 }
 
 func DefaultMasterMap() map[string]Command {
 	m := make(map[string]Command)
-	m["do"] = CommandMasterDo
-	m["upgrade"] = CommandMasterUpgrade
-	m["r"] = CommandMasterReboot
-	m["part"] = CommandMasterPart
-	m["quit"] = CommandMasterQuit
-	m["q"] = CommandMasterQuit
-	m["quit"] = CommandMasterQuit
-	m["set"] = CommandMasterSet
-	m["plugin"] = MasterCommandLoadPlugin
+	m["do"] = commandMasterDo
+	m["upgrade"] = commandMasterUpgrade
+	m["r"] = commandMasterReboot
+	m["part"] = commandMasterPart
+	m["quit"] = commandMasterQuit
+	m["q"] = commandMasterQuit
+	m["quit"] = commandMasterQuit
+	m["set"] = commandMasterSet
+	m["plugin"] = masterCommandLoadPlugin
 	return m
 }
 
-func CommandUptime(c *Connection, irc *IRC) {
+func commandUptime(c *Connection, irc *IRC) {
 	irc.Reply(c, time.Now().Sub(c.since).String())
 }
-func CommandHostUptime(c *Connection, irc *IRC) {
+func commandHostUptime(c *Connection, irc *IRC) {
 	// output of uptime command
 	uptime := exec.Command("/usr/bin/uptime")
 
@@ -232,10 +239,10 @@ func CommandHostUptime(c *Connection, irc *IRC) {
 		irc.Reply(c, output)
 	}
 }
-func CommandEcho(c *Connection, irc *IRC) {
+func commandEcho(c *Connection, irc *IRC) {
 	irc.Reply(c, fmt.Sprint(strings.Join(irc.Arguments, " ")))
 }
-func CommandQuiet(c *Connection, irc *IRC) {
+func commandQuiet(c *Connection, irc *IRC) {
 	c.quiet = !c.quiet
 	if !c.quiet {
 		c.Log.Println("no longer quiet")
@@ -243,7 +250,7 @@ func CommandQuiet(c *Connection, irc *IRC) {
 	}
 	c.Log.Println("muted")
 }
-func CommandHelp(c *Connection, irc *IRC) {
+func commandHelp(c *Connection, irc *IRC) {
 	if len(irc.Arguments) < 2 || irc.Arguments[0] == "" {
 		var commandlist string
 		for i := range c.CommandMap {
@@ -254,11 +261,11 @@ func CommandHelp(c *Connection, irc *IRC) {
 	}
 }
 
-func CommandAbout(c *Connection, irc *IRC) {
+func commandAbout(c *Connection, irc *IRC) {
 	irc.Reply(c, "I'm a robot. You can learn more at https://aerth.github.io/ircb/")
 }
-func CommandLineCount(c *Connection, irc *IRC) {}
-func CommandDefine(c *Connection, irc *IRC) {
+func commandLineCount(c *Connection, irc *IRC) {}
+func commandDefine(c *Connection, irc *IRC) {
 	if !c.config.Define {
 		return
 	}
@@ -277,13 +284,13 @@ func CommandDefine(c *Connection, irc *IRC) {
 	irc.Reply(c, fmt.Sprintf("defined: %q", action))
 
 }
-func CommandLine(c *Connection, irc *IRC)          {}
-func CommandHistorySearch(c *Connection, irc *IRC) {}
-func CommandMasterDo(c *Connection, irc *IRC) {
+func commandLine(c *Connection, irc *IRC)          {}
+func commandHistorySearch(c *Connection, irc *IRC) {}
+func commandMasterDo(c *Connection, irc *IRC) {
 	c.Log.Println("GOT DO:", irc)
 	c.Write([]byte(strings.Join(irc.Arguments, " ")))
 }
-func CommandMasterReboot(c *Connection, irc *IRC) {
+func commandMasterReboot(c *Connection, irc *IRC) {
 	b, err := c.MarshalConfig()
 	if err != nil {
 		c.Log.Printf("error while trying to reboot: %v", err)
@@ -300,11 +307,11 @@ func CommandMasterReboot(c *Connection, irc *IRC) {
 	c.Respawn()
 }
 
-func CommandMasterQuit(c *Connection, irc *IRC) {
+func commandMasterQuit(c *Connection, irc *IRC) {
 	irc.Reply(c, "I am unstoppable. Did you mean... reboot ? upgrade ?")
 }
 
-func CommandMasterPart(c *Connection, irc *IRC) {
+func commandMasterPart(c *Connection, irc *IRC) {
 	part := func(ch string) []byte {
 		if strings.HasPrefix(ch, "#") {
 			return []byte("PART :" + ch)
@@ -324,17 +331,17 @@ func CommandMasterPart(c *Connection, irc *IRC) {
 
 }
 
-func CommandMasterDebug(c *Connection, irc *IRC) {
+func commandMasterDebug(c *Connection, irc *IRC) {
 	c.Log.Println(c, irc)
 }
-func CommandMasterReload(c *Connection, irc *IRC) {
+func commandMasterReload(c *Connection, irc *IRC) {
 	err := LoadPlugin(c, "plugin.so")
 	if err != nil {
 		c.SendMaster("%v", err)
 	}
 	c.SendMaster("plugins reloaded")
 }
-func CommandMasterSet(c *Connection, irc *IRC) {
+func commandMasterSet(c *Connection, irc *IRC) {
 	if len(irc.Arguments) != 2 {
 		irc.Reply(c, `usage: set optionname on|off`)
 		return
@@ -381,7 +388,7 @@ func CommandMasterSet(c *Connection, irc *IRC) {
 
 }
 
-func CommandMasterUpgrade(c *Connection, irc *IRC) {
+func commandMasterUpgrade(c *Connection, irc *IRC) {
 	checkout := exec.Command("git", "checkout", "master")
 	out, err := checkout.CombinedOutput()
 	c.Log.Println(string(out))
@@ -408,8 +415,8 @@ func CommandMasterUpgrade(c *Connection, irc *IRC) {
 	c.Respawn()
 
 }
-func CommandMasterMacro(c *Connection, irc *IRC) {}
-func MasterCommandLoadPlugin(c *Connection, irc *IRC) {
+func commandMasterMacro(c *Connection, irc *IRC) {}
+func masterCommandLoadPlugin(c *Connection, irc *IRC) {
 	if len(irc.Arguments) != 1 {
 		irc.Reply(c, "need plugin name")
 	}
