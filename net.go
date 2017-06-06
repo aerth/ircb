@@ -50,35 +50,37 @@ type Connection struct {
 	quiet      bool
 }
 
-func (config *Config) NewConnection() (*Connection, error) {
-	var err error
+func (config *Config) NewConnection() *Connection {
 	if config.Database == "" {
 		config.Database = "bolt.db"
 	}
 	c := new(Connection)
 	c.config = config
 	c.Log = log.New(os.Stderr, "", log.Lshortfile)
-	c.boltdb, err = loadDatabase(c.config.Database)
-	if err != nil {
-		return nil, err
-	}
-
 	c.since = time.Now()
 	// for now, using default client.
 	c.HttpClient = http.DefaultClient
 	c.CommandMap = DefaultCommandMap()
 	c.MasterMap = DefaultMasterMap()
-	return c, nil
+	return c
 }
 func (c *Connection) Connect() (err error) {
-	if c.config.Diamond {
-		err = initializeDiamond(c)
+	if !c.connected {
+		c.connected = true
+		defer func(c *Connection) {
+			c.connected = false
+			c.Close()
+		}(c)
+		if c.config.Diamond {
+			err = initializeDiamond(c)
+			if err != nil {
+				return err
+			}
+		}
+		c.boltdb, err = loadDatabase(c.config.Database)
 		if err != nil {
 			return err
 		}
-	}
-	if !c.connected {
-		c.connected = true
 
 		// dial direct
 		c.Log.Println("connecting...")
@@ -102,18 +104,27 @@ func (c *Connection) Connect() (err error) {
 	return fmt.Errorf("already connected")
 }
 func (c *Connection) Close() error {
-	err1 := c.boltdb.Close()
-	if err1 != nil {
-		c.Log.Println(err1)
+	if c == nil {
+
+		return nil
+	}
+	if c.boltdb != nil {
+		err1 := c.boltdb.Close()
+		if err1 != nil {
+			c.Log.Println(err1)
+		}
 	}
 	if c.config.Diamond {
 		os.Remove("diamond.socket")
 	}
-	_, err := c.conn.Write([]byte(fmt.Sprintf("QUIT :%s\r\n", version)))
-	if err != nil {
-		c.Log.Println(err)
+	if c.conn != nil {
+		_, err := c.conn.Write([]byte(fmt.Sprintf("QUIT :%s\r\n", version)))
+		if err != nil {
+			c.Log.Println(err)
+		}
+		return c.conn.Close()
 	}
-	return c.conn.Close()
+	return nil
 }
 
 // Write to irc connection, adding '\r\n'

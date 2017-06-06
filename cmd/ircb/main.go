@@ -52,10 +52,7 @@ LoadConfig:
 	if *verbose {
 		config.Verbose = *verbose
 	}
-	conn, err := config.NewConnection()
-	if err != nil {
-		log.Fatal(err)
-	}
+	conn := config.NewConnection()
 	err = ircb.LoadPlugin(conn, "plugin.so")
 	if err != nil && err != ircb.ErrNoPluginSupport && err != ircb.ErrNoPlugin {
 		log.Fatal(err)
@@ -68,7 +65,8 @@ LoadConfig:
 			err = conn.Connect()
 		}
 	}
-	log.Fatal(err)
+	conn.Log.Println(err)
+	os.Exit(111)
 }
 func buildconfig() *ircb.Config {
 	config := ircb.NewDefaultConfig()
