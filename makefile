@@ -4,7 +4,7 @@ IRCB=${GOPATH}/src/github.com/aerth/ircb
 rebuild:
 	test -f plugin.so || CGO_ENABLED=1 make -C ${IRCB}/plugins/
 	test -f plugin.so && echo plugin already exists || \
-		mv -nv ${IRCB}/plugins/plugin.so plugin.so	
+		mv -nv ${IRCB}/plugins/plugin.so plugin_new.so	
 	@echo building irc client
 	CGO_ENABLED=1 go get -v -d github.com/aerth/ircb/cmd/ircb
 	CGO_ENABLED=1 go install -v .

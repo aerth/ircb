@@ -29,6 +29,10 @@ var LoadPlugin = func(c *Connection, s string) error {
 	return ErrNoPluginSupport
 }
 
+func (c *Connection) LoadPlugin(name string) error {
+	return LoadPlugin(c, name)
+}
+
 type Connection struct {
 	Log        *log.Logger
 	HttpClient *http.Client
@@ -145,6 +149,7 @@ func (c *Connection) MasterCheck() {
 	case -1:
 		// no auth mode
 		c.Log.Println("WARNING:", "Authentication Disabled.")
+		c.masterauth = time.Now()
 	default:
 		// freenode and oragono style
 		_, err := c.conn.Write([]byte("" +

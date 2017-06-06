@@ -210,6 +210,7 @@ func DefaultMasterMap() map[string]Command {
 	m["q"] = CommandMasterQuit
 	m["quit"] = CommandMasterQuit
 	m["set"] = CommandMasterSet
+	m["plugin"] = MasterCommandLoadPlugin
 	return m
 }
 
@@ -408,3 +409,13 @@ func CommandMasterUpgrade(c *Connection, irc *IRC) {
 
 }
 func CommandMasterMacro(c *Connection, irc *IRC) {}
+func MasterCommandLoadPlugin(c *Connection, irc *IRC) {
+	if len(irc.Arguments) != 1 {
+		irc.Reply(c, "need plugin name")
+	}
+	err := c.LoadPlugin(irc.Arguments[0])
+	if err != nil {
+		c.SendMaster("error loading plugin: %v", err)
+	}
+	irc.Reply(c, "plugin loaded: "+irc.Arguments[0])
+}
