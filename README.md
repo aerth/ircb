@@ -2,6 +2,7 @@
 
 [![Build Status](https://travis-ci.org/aerth/ircb.svg?branch=master)](https://travis-ci.org/aerth/ircb)
 
+
 friendly channel bot
 
   * karma system
@@ -38,9 +39,12 @@ if so, you will be 'authenticated' for 5 minutes
 the second command, it will try to fetch newest source code and rebuild and redeploy itself
 if fails, should private message master reason
 
-#### commands
+### Plugin system
 
-See p.go in ./plugins/ directory for an example plugin
+See [Plugin Repository](https://github.com/aerth/ircb-plugins) for current list
 
-Build the plugin.so, move next to ircb executable, and send `$update-plugins` command to ircb
+Plugins must be unique name and package import path
 
+Currently can't be unloaded
+
+Plugins can do unknown things
