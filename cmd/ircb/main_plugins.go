@@ -1,6 +1,8 @@
-// +build go1.8
+// +build go1.8,cgo
 
 package main
+
+import "C"
 
 import (
 	"os"
@@ -9,9 +11,6 @@ import (
 
 	"github.com/aerth/ircb"
 )
-
-// // No C code needed, plugins need CGO_ENABLED=1
-import "C"
 
 func init() {
 	ircb.LoadPlugin = loadPlugin

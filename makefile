@@ -8,13 +8,7 @@ rebuild:
 	CGO_ENABLED=1 go build -v -o ircb github.com/aerth/ircb/cmd/ircb
 	@echo built: ./ircb
 	@test -f config.json || ( cp -nv ${IRCB}/default.json config.json && echo "new default config" )
-plugin:
-	CGO_ENABLED=1 make -C ${IRCB}/plugins/
-	mv -v ${IRCB}/plugins/plugin.so plugin.so     
-
-all: plugin rebuild
-	@echo complete
-	
+all: rebuild
 run:
 	test -x ./ircb || ${MAKE} rebuild
 	test -x ./ircb || exit 111
@@ -24,6 +18,8 @@ run:
 test:
 	CGO_ENABLED=1 go test -race -v ./...
 
+static: fast
+
 fast:
 	CGO_ENABLED=0 go install -v
-	CGO_ENABLED=0 go build -v -o ircb ./cmd/ircb
+	CGO_ENABLED=0 go build -v -ldflags='-w -s' -o ircb ./cmd/ircb
