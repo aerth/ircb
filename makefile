@@ -7,7 +7,9 @@ rebuild:
 		mv -nv ${IRCB}/plugins/plugin.so plugin.so	
 	@echo building irc client
 	CGO_ENABLED=1 go get -v -d github.com/aerth/ircb/cmd/ircb
-	CGO_ENABLED=1 go build -o ircb github.com/aerth/ircb/cmd/ircb
+	CGO_ENABLED=1 go install -v .
+	CGO_ENABLED=1 go build -v -o ircb github.com/aerth/ircb/cmd/ircb
+
 
 	test -f config.json || ( cp -nv ${IRCB}/default.json config.json && echo "new default config" )
 plugin:
@@ -23,3 +25,9 @@ run:
 	test -f config.json || ( cp -nv ${IRCB}/default.json config.json && echo "new default config" )
 	./ircb
 
+test:
+	CGO_ENABLED=1 go test -race -v ./...
+
+fast:
+	CGO_ENABLED=0 go install -v
+	CGO_ENABLED=0 go build -v -o ircb ./cmd/ircb

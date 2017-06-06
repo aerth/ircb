@@ -2,6 +2,7 @@ package ircb
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -40,16 +41,47 @@ func verbIntHandler(c *Connection, irc *IRC) bool {
 	verb, _ := strconv.Atoi(irc.Verb)
 	switch verb {
 	default: // unknown numerical verb
-		c.Log.Printf("new verb: %q", irc.Verb)
-	case 372, 1, 2, 3, 4, 5, 6, 7, 0:
+		c.Log.Printf("%s %q", irc.Verb, irc.Message)
+		return handled
+	case 331:
+		c.Log.Printf("%s TOPIC: %q", irc.Raw, "")
+		return handled
+	case 353:
+		c.Log.Printf("%s USER LIST: %q", irc.Raw, "")
+		return handled
+	case 372, 1, 2, 3, 4, 5, 6, 7, 0, 366:
 		return handled
 	case 221:
-		c.Log.Printf("new mode: %q", irc.Message)
+		c.Log.Printf("UMODE: %q", irc.Message)
+		return handled
 	case 433:
 
 		c.Close()
+		return handled
 	}
-	return nothandled
+
+}
+
+func (c *Connection) CommandMasterAdd(name string, fn Command) {
+	c.maplock.Lock()
+	defer c.maplock.Unlock()
+	c.MasterMap[name] = fn
+	return
+}
+func (c *Connection) CommandAdd(name string, fn Command) {
+	c.maplock.Lock()
+	defer c.maplock.Unlock()
+	c.CommandMap[name] = fn
+}
+func (c *Connection) CommandMasterRemove(name string) {
+	c.maplock.Lock()
+	defer c.maplock.Unlock()
+	delete(c.MasterMap, name)
+}
+func (c *Connection) CommandRemove(name string) {
+	c.maplock.Lock()
+	defer c.maplock.Unlock()
+	delete(c.CommandMap, name)
 }
 
 func privmsgMasterHandler(c *Connection, irc *IRC) bool {
@@ -58,8 +90,8 @@ func privmsgMasterHandler(c *Connection, irc *IRC) bool {
 		return nothandled
 	}
 
-	if time.Now().Sub(c.masterauth) > 5*time.Minute {
-		c.Log.Println("bad master, need reauth")
+	if dur := time.Now().Sub(c.masterauth); dur > 5*time.Minute {
+		c.Log.Println("need reauth after", dur)
 		c.MasterCheck()
 		return nothandled
 	}
@@ -172,6 +204,9 @@ func DefaultMasterMap() map[string]Command {
 	m := make(map[string]Command)
 	m["do"] = CommandMasterDo
 	m["upgrade"] = CommandMasterUpgrade
+	m["r"] = CommandMasterReboot
+	m["part"] = CommandMasterPart
+	m["quit"] = CommandMasterQuit
 	m["q"] = CommandMasterQuit
 	m["quit"] = CommandMasterQuit
 	m["set"] = CommandMasterSet
@@ -247,11 +282,57 @@ func CommandMasterDo(c *Connection, irc *IRC) {
 	c.Log.Println("GOT DO:", irc)
 	c.Write([]byte(strings.Join(irc.Arguments, " ")))
 }
-func CommandMasterVoice(c *Connection, irc *IRC) {}
+func CommandMasterReboot(c *Connection, irc *IRC) {
+	b, err := c.MarshalConfig()
+	if err != nil {
+		c.Log.Printf("error while trying to reboot: %v", err)
+		irc.Reply(c, "cant reboot, check logs")
+		return
+	}
+	err = ioutil.WriteFile("config.json", b, 0600)
+	if err != nil {
+		c.Log.Printf("error while trying to write config file for respawn: %v", err)
+		irc.Reply(c, "cant reboot, check logs")
+		return
+	}
+	irc.Reply(c, "brb")
+	c.Respawn()
+}
+
+func CommandMasterQuit(c *Connection, irc *IRC) {
+	irc.Reply(c, "I am unstoppable. Did you mean... reboot ? upgrade ?")
+}
+
+func CommandMasterPart(c *Connection, irc *IRC) {
+	part := func(ch string) []byte {
+		if strings.HasPrefix(ch, "#") {
+			return []byte("PART :" + ch)
+		}
+		return nil
+	}
+	if strings.HasPrefix(irc.To, "#") {
+		irc.Reply(c, ":(")
+		c.Write(part(irc.To))
+		c.SendMaster("Parted channel: %q", irc.To)
+		return
+	}
+	if len(irc.Arguments) == 1 {
+		c.Write(part(irc.Arguments[0]))
+		c.SendMaster("Parted channel: %q", irc.Arguments[0])
+	}
+
+}
+
 func CommandMasterDebug(c *Connection, irc *IRC) {
 	c.Log.Println(c, irc)
 }
-func CommandMasterReload(c *Connection, irc *IRC) {}
+func CommandMasterReload(c *Connection, irc *IRC) {
+	err := LoadPlugin(c, "plugin.so")
+	if err != nil {
+		c.SendMaster("%v", err)
+	}
+	c.SendMaster("plugins reloaded")
+}
 func CommandMasterSet(c *Connection, irc *IRC) {
 	if len(irc.Arguments) != 2 {
 		irc.Reply(c, `usage: set optionname on|off`)
@@ -327,6 +408,3 @@ func CommandMasterUpgrade(c *Connection, irc *IRC) {
 
 }
 func CommandMasterMacro(c *Connection, irc *IRC) {}
-func CommandMasterQuit(c *Connection, irc *IRC) {
-	c.Close()
-}

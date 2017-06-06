@@ -1,6 +1,7 @@
 package ircb
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -40,7 +41,7 @@ func (c *Connection) HandleLinks(irc *IRC) {
 		return
 	}
 
-	c.Log.Println("sending request:", ss)
+	c.Log.Println("sending http request:", ss)
 	t1 := time.Now()
 	resp, err := c.HttpClient.Do(req)
 	if err != nil {
@@ -50,30 +51,23 @@ func (c *Connection) HandleLinks(irc *IRC) {
 	if resp.StatusCode != 200 {
 		// reply error
 		irc.Reply(c, fmt.Sprintf("%s %s", resp.Status, time.Now().Sub(t1)))
-
 		return
 	}
 	defer resp.Body.Close()
-	reader := io.LimitReader(resp.Body, 1024)
-	meta := GetLinkTitleFromHTML(reader)
+	reader := io.LimitReader(resp.Body, 512)
 	b, err := ioutil.ReadAll(reader)
-	if err == nil {
-		ct := http.DetectContentType(b)
-		meta.ContentType = ct
-
-	} else {
-
+	if err != nil {
 		c.Log.Println("error reading from reader:", err)
-
+		// but still reply with response time
+		irc.Reply(c, fmt.Sprintf("%s %s (%s)", resp.Status, time.Now().Sub(t1), "read error"))
+		return
 	}
-
-	// reply
+	meta := GetLinkTitleFromHTML(b)
 	if meta.Title != "" {
 		irc.Reply(c, fmt.Sprintf("%s %s %q (%s)", resp.Status, time.Now().Sub(t1), meta.Title, meta.ContentType))
 		return
 	}
 	irc.Reply(c, fmt.Sprintf("%s %s (%s)", resp.Status, time.Now().Sub(t1), meta.ContentType))
-	return
 
 }
 
@@ -85,12 +79,15 @@ type htmlMeta struct {
 	ContentType string `json:"content_type"`
 }
 
-func GetLinkTitleFromHTML(reader io.Reader) *htmlMeta {
-	z := html.NewTokenizer(reader)
+func GetLinkTitleFromHTML(htmlbytes []byte) *htmlMeta {
+	var reader bytes.Buffer
+	reader.Write(htmlbytes)
+	z := html.NewTokenizer(&reader)
 
 	titleFound := false
 
 	hm := new(htmlMeta)
+	hm.ContentType = http.DetectContentType(htmlbytes)
 
 	for {
 		tt := z.Next()

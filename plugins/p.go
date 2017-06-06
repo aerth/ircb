@@ -12,16 +12,10 @@ import (
 func main() {}
 
 func Init(c *ircb.Connection) error {
-	if c.CommandMap == nil {
-		c.CommandMap = make(map[string]ircb.Command)
-
-	}
-
-	if c.MasterMap == nil {
-		c.MasterMap = make(map[string]ircb.Command)
-	}
-	c.CommandMap["time"] = CommandTime
-	c.MasterMap["update-plugins"] = MasterCommandReloadPlugin
+	c.CommandAdd("time", CommandTime)
+	c.CommandAdd("time-baz", CommandTime)
+	c.CommandAdd("time-boo", CommandTime)
+	c.CommandMasterAdd("update-plugins", MasterCommandReloadPlugin)
 	return nil
 }
 

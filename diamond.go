@@ -11,7 +11,10 @@ func initializeDiamond(closer io.Closer) error {
 	if err != nil {
 		return err
 	}
-	d.SetRunlevel(0, closer.Close)
+	d.Config.Kickable = true
+	d.SetRunlevel(0, func() error {
+		return closer.Close()
+	})
 	d.SetRunlevel(1, func() error { return nil })
 	d.Runlevel(1)
 	return nil

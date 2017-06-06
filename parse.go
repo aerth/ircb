@@ -92,17 +92,20 @@ func Parse(input string) *IRC {
 		return irc
 	default:
 		irc.ReplyTo = strings.Split(s[0], "!")[0]
-		irc.Channel = s[0]
+		irc.Channel = s[3]
 		irc.Verb = s[1]
 		irc.To = s[2]
-
+		irc.Channel = s[3]
 		irc.Message = s[3]
-		// extract message
-		for i, v := range s[3:] {
-			if strings.HasPrefix(v, ":") {
-				// message has colon prefix which marks the end of tokens
-				irc.Message = strings.Join(s[i+3:], " ")
-				break
+		if len(s) > 4 {
+			// extract message
+			for i, v := range s[4:] {
+				if strings.HasPrefix(v, ":") {
+					// message has colon prefix which marks the end of tokens
+					irc.Message += " " + strings.Join(s[i+4:], " ")
+					break
+				}
+				irc.Message += " " + v
 			}
 		}
 		irc.Message = strings.TrimPrefix(irc.Message, ":")

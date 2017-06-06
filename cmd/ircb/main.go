@@ -25,6 +25,7 @@ var (
 	flagdisablemacros  = flag.Bool("nodefine", false, "dont use definition system")
 	flagdisablehistory = flag.Bool("nohistory", false, "dont use history system")
 	flagdisablekarma   = flag.Bool("nokarma", false, "dont use karma system")
+	verbose            = flag.Bool("v", false, "lots of extra printing")
 )
 
 func main() {
@@ -48,6 +49,9 @@ LoadConfig:
 		goto LoadConfig
 
 	}
+	if *verbose {
+		config.Verbose = *verbose
+	}
 	conn, err := config.NewConnection()
 	if err != nil {
 		log.Fatal(err)
@@ -58,20 +62,14 @@ LoadConfig:
 	}
 
 	err = conn.Connect()
-
 	if err != nil {
-		log.Fatal(err)
-	}
-
-	if b, err := conn.MarshalConfig(); err == nil {
-		err := ioutil.WriteFile("config.json", b, 0700)
-		if err != nil {
-			log.Fatal(err)
+		if strings.Contains(err.Error(), "delete if you want") {
+			os.Remove("diamond.socket")
+			err = conn.Connect()
 		}
 	}
-
+	log.Fatal(err)
 }
-
 func buildconfig() *ircb.Config {
 	config := ircb.NewDefaultConfig()
 	config.Host = *flaghost

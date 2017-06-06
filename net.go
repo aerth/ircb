@@ -16,7 +16,7 @@ import (
 	"github.com/boltdb/bolt"
 )
 
-var version = "ircb v0.0.7+"
+var version = "ircb v0.0.8"
 var ErrNoPluginSupport = fmt.Errorf("no plugin support")
 var ErrNoPlugin = fmt.Errorf("no plugin found")
 var ErrPluginInv = fmt.Errorf("invalid plugin")
@@ -40,8 +40,7 @@ type Connection struct {
 	reader     *bufio.Reader
 	CommandMap map[string]Command
 	MasterMap  map[string]Command
-	karma      map[string]int // map[nick]level
-	karmalock  sync.Mutex
+	maplock    sync.Mutex
 	connected  bool
 	joined     bool
 	quiet      bool
@@ -103,9 +102,12 @@ func (c *Connection) Close() error {
 	if err1 != nil {
 		c.Log.Println(err1)
 	}
+	if c.config.Diamond {
+		os.Remove("diamond.socket")
+	}
 	_, err := c.conn.Write([]byte(fmt.Sprintf("QUIT :%s\r\n", version)))
 	if err != nil {
-		return err
+		c.Log.Println(err)
 	}
 	return c.conn.Close()
 }
@@ -132,27 +134,38 @@ func (c *Connection) Write(b []byte) (n int, err error) {
 	return c.conn.Write(b)
 }
 
+// MasterCheck sends a private message to NickServ to authenticate master user
+//
+// 	-1 no auth mode
+//	0 default, freenode and oragono ACC style
+//	1 STATUS style
+//
 func (c *Connection) MasterCheck() {
 	switch c.config.AuthMode {
 	case -1:
 		// no auth mode
+		c.Log.Println("WARNING:", "Authentication Disabled.")
 	default:
-		_, err := c.conn.Write([]byte("PRIVMSG NickServ :ACC " + strings.Split(c.config.Master, ":")[0] + "\r\n"))
+		// freenode and oragono style
+		_, err := c.conn.Write([]byte("" +
+			"PRIVMSG NickServ :ACC " + strings.Split(c.config.Master, ":")[0] + "\r\n"))
 		if err != nil {
-			c.Log.Println(err)
+			c.Log.Printf("auth error: %b", err)
 		}
 
 	case 1:
-		_, err := c.conn.Write([]byte("PRIVMSG NickServ :STATUS " + strings.Split(c.config.Master, ":")[0] + "\r\n"))
+		// STATUS style
+		_, err := c.conn.Write([]byte("" +
+			"PRIVMSG NickServ :STATUS " + strings.Split(c.config.Master, ":")[0] + "\r\n"))
 		if err != nil {
-			c.Log.Println(err)
+			c.Log.Printf("auth error: %b", err)
 		}
 
 	}
 
 }
 
-// SendMaster sends fmt to master
+// SendMaster sends formatted text to master user
 func (c *Connection) SendMaster(format string, i ...interface{}) {
 	if strings.TrimSpace(format) == "" {
 		return
@@ -164,7 +177,7 @@ func (c *Connection) SendMaster(format string, i ...interface{}) {
 	c.Send(reply)
 }
 
-// Send IRC
+// Send IRC message (uses To and Message fields)
 func (c *Connection) Send(irc IRC) {
 	e := irc.Encode()
 	c.Log.Printf(">%q", string(e))
@@ -241,7 +254,6 @@ func (c *Connection) readerwriter() error {
 		// parse
 		cfg := *c.config
 		irc := cfg.Parse(msg)
-
 		// numeric 'verb'
 		if _, err := strconv.Atoi(irc.Verb); err == nil {
 			if verbIntHandler(c, irc) {
@@ -251,10 +263,13 @@ func (c *Connection) readerwriter() error {
 
 		switch irc.Verb {
 		default:
-			c.Log.Println("new verb", irc.Verb)
+			c.Log.Println("new verb", irc.Verb, irc.Message)
 			if c.config.Verbose {
 				c.Log.Println(irc)
 			}
+			continue
+		case "QUIT", "PART", "NICK", "JOIN":
+			continue
 		case "NOTICE":
 			// :NickServ!NickServ@services. NOTICE mastername :mustangsally ACC 3
 			switch irc.ReplyTo {
@@ -274,13 +289,11 @@ func (c *Connection) readerwriter() error {
 				}
 
 			default:
-
-				c.Log.Printf("NOTICE from %q: %q\n\tRaw:%q\n\n", irc.ReplyTo, irc.Message, irc.Raw)
-				c.Log.Println(fmt.Sprintf(formatauth, c.config.Nick, strings.Split(c.config.Master, ":")[0]))
+				c.Log.Println("NOTICE", irc.ReplyTo, irc.Message)
 			}
 
 		case "MODE":
-			c.Log.Printf("got mode: %q", irc.Message)
+			c.Log.Printf("NEW MODE: %q", irc.Message)
 			if !c.joined {
 				for _, ch := range strings.Split(c.config.Channels, ",") {
 					if ch != "" {

@@ -1,9 +1,6 @@
 package ircb
 
 import (
-	"encoding/json"
-	"io/ioutil"
-	"os"
 	"strings"
 )
 
@@ -44,32 +41,4 @@ func (c *Connection) ParseKarma(input string) (handled bool) {
 		return true
 	}
 	return false
-}
-
-func LoadBackupKarmaMap(filename string) (map[string]int, error) {
-	stat, err := os.Stat(filename)
-	if err != nil {
-		return nil, err
-	}
-	var m = make(map[string]int)
-	if stat.Size() == 0 {
-		return m, nil
-	}
-	b, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return nil, err
-	}
-	err = json.Unmarshal(b, &m)
-	if err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
-func (c *Connection) SaveBackupKarmaMap() error {
-	b, err := json.Marshal(c.karma)
-	if err != nil {
-		return err
-	}
-	return ioutil.WriteFile("karma.backup", b, 0600)
 }
