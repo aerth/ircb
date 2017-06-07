@@ -53,7 +53,7 @@ func (c *Connection) AddCommand(name string, fn Command) {
 	c.CommandMap[name] = fn
 }
 
-// AddCommand adds a new public command, named 'name' to the CommandMap
+// RemoveMasterCommand adds a new public command, named 'name' to the CommandMap
 func (c *Connection) RemoveMasterCommand(name string) {
 	c.maplock.Lock()
 	defer c.maplock.Unlock()
@@ -330,7 +330,7 @@ func masterCommandFetchPlugin(c *Connection, irc *IRC) {
 	}
 
 	irc.Reply(c, "fetching plugin")
-	fetch := exec.Command("go", "get", "-v", "-u", "-d", "github.com/aerth/ircb-plugins/...")
+	fetch := exec.Command("go", "get", "-v", "-d", "github.com/aerth/ircb-plugins/...")
 	out, err := fetch.CombinedOutput()
 	if err != nil {
 		c.Log.Printf("error while fetching plugin %q: %v", name, err)

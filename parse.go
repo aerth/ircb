@@ -113,6 +113,9 @@ func Parse(input string) *IRC {
 	return irc
 }
 
+
+// Parse a command in context of nickname, command prefix
+// Does not handle master command parsing
 func (cfg Config) Parse(input string) *IRC {
 	irc := Parse(input)
 	if cfg.Verbose {

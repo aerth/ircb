@@ -126,7 +126,7 @@ func privmsgHandler(c *Connection, irc *IRC) {
 	}
 	// try to parse http link title
 	if c.config.ParseLinks && strings.Contains(irc.Message, "http") {
-		go c.HandleLinks(irc)
+		go c.linkhandler(irc)
 	}
 
 }

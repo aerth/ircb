@@ -19,9 +19,13 @@ import (
 
 var version = "ircb v0.0.9"
 
+// Connection will be divided into:
+// 	Client
+//	Connection
+//
 type Connection struct {
 	Log        *log.Logger
-	HttpClient *http.Client       // customize user agent, proxy, tls, redirects, etc
+	HTTPClient *http.Client       // customize user agent, proxy, tls, redirects, etc
 	CommandMap map[string]Command // map of command names to Command functions
 	MasterMap  map[string]Command // map of master command names to Command functions
 	Diamond    *diamond.System    // can be nil
@@ -37,6 +41,7 @@ type Connection struct {
 	quiet      bool
 }
 
+// NewConnection returns an unconnected client from the given config
 func (config *Config) NewConnection() *Connection {
 	if config.Database == "" {
 		config.Database = "bolt.db"
@@ -46,7 +51,8 @@ func (config *Config) NewConnection() *Connection {
 	c.since = time.Now()
 
 	// TODO: custom client for user agent, proxy support
-	c.HttpClient = http.DefaultClient
+	c.HTTPClient = http.DefaultClient
+	c.HTTPClient.Timeout = time.Second * 3
 	c.CommandMap = DefaultCommandMap()
 	c.MasterMap = DefaultMasterMap()
 	if config.Verbose {
@@ -56,6 +62,8 @@ func (config *Config) NewConnection() *Connection {
 	}
 	return c
 }
+
+// Connect dials the host
 func (c *Connection) Connect() (err error) {
 	if !c.connected {
 		c.connected = true
@@ -64,17 +72,16 @@ func (c *Connection) Connect() (err error) {
 			c.Close()
 		}(c)
 		if c.config.Diamond {
-			d, err := diamond.New("diamond.socket")
+			c.Diamond, err = diamond.New("diamond.socket")
 			if err != nil {
 				return err
 			}
-			d.Config.Kickable = true
-			d.SetRunlevel(0, func() error {
+			c.Diamond.Config.Kickable = true
+			c.Diamond.SetRunlevel(0, func() error {
 				return c.Close()
 			})
-			d.SetRunlevel(1, func() error { return nil })
-			d.Runlevel(1)
-			c.Diamond = d
+			c.Diamond.SetRunlevel(1, func() error { return nil })
+			c.Diamond.Runlevel(1)
 		}
 		c.boltdb, err = loadDatabase(c.config.Database)
 		if err != nil {
@@ -102,6 +109,8 @@ func (c *Connection) Connect() (err error) {
 	}
 	return fmt.Errorf("already connected")
 }
+
+// Close all connections and databases, remove diamond.socket
 func (c *Connection) Close() error {
 	if c == nil {
 
@@ -349,6 +358,7 @@ func (c *Connection) readerwriter() error {
 					}
 				}
 				c.joined = true
+				c.Log.Println("Starting normal operation")
 
 			}
 

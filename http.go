@@ -13,11 +13,13 @@ import (
 	"golang.org/x/net/html"
 )
 
-func (c *Connection) HandleLinks(irc *IRC) {
+// linkhandler replies to messages with http links
+func (c *Connection) linkhandler(irc *IRC) {
 	if !c.config.ParseLinks {
 		return
 	}
 	defer c.Log.Println("done handling link")
+	// word starts with http and is url parsable
 	i := strings.Index(irc.Message, "http")
 	if i == -1 {
 
@@ -43,7 +45,7 @@ func (c *Connection) HandleLinks(irc *IRC) {
 
 	c.Log.Println("sending http request:", ss)
 	t1 := time.Now()
-	resp, err := c.HttpClient.Do(req)
+	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
 		c.Log.Println("error getting url:", ss, err)
 		return
@@ -62,7 +64,7 @@ func (c *Connection) HandleLinks(irc *IRC) {
 		irc.Reply(c, fmt.Sprintf("%s %s (%s)", resp.Status, time.Now().Sub(t1), "read error"))
 		return
 	}
-	meta := GetLinkTitleFromHTML(b)
+	meta := getLinkTitleFromHTML(b)
 	if meta.Title != "" {
 		irc.Reply(c, fmt.Sprintf("%s %s %q (%s)", resp.Status, time.Now().Sub(t1), meta.Title, meta.ContentType))
 		return
@@ -79,7 +81,7 @@ type htmlMeta struct {
 	ContentType string `json:"content_type"`
 }
 
-func GetLinkTitleFromHTML(htmlbytes []byte) *htmlMeta {
+func getLinkTitleFromHTML(htmlbytes []byte) *htmlMeta {
 	var reader bytes.Buffer
 	reader.Write(htmlbytes)
 	z := html.NewTokenizer(&reader)
