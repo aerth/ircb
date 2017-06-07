@@ -49,9 +49,7 @@ Currently can't be unloaded
 
 Plugins can do unknown things
 
-Install new plugins by adding line to makefile:
+Install new plugin 'skeleton' with master command `$fetch skeleton`
 
-```CGO_ENABLED=1 go build -o skeleton.so -buildmode=plugin github.com/aerth/ircb-plugins/skeleton```
-
-And load a plugin (as master) with the command `$plugin skeleton.so`
+Load compiled plugin 'new.so' with master command `$plugin new`
 
