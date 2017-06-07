@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	diamond "github.com/aerth/diamond/lib"
 	"github.com/boltdb/bolt"
 )
 
@@ -23,6 +24,7 @@ type Connection struct {
 	HttpClient *http.Client       // customize user agent, proxy, tls, redirects, etc
 	CommandMap map[string]Command // map of command names to Command functions
 	MasterMap  map[string]Command // map of master command names to Command functions
+	Diamond    *diamond.System    // can be nil
 	config     *Config            // current config
 	boltdb     *bolt.DB           // opened database
 	conn       io.ReadWriteCloser
@@ -62,10 +64,17 @@ func (c *Connection) Connect() (err error) {
 			c.Close()
 		}(c)
 		if c.config.Diamond {
-			err = initializeDiamond(c)
+			d, err := diamond.New("diamond.socket")
 			if err != nil {
 				return err
 			}
+			d.Config.Kickable = true
+			d.SetRunlevel(0, func() error {
+				return c.Close()
+			})
+			d.SetRunlevel(1, func() error { return nil })
+			d.Runlevel(1)
+			c.Diamond = d
 		}
 		c.boltdb, err = loadDatabase(c.config.Database)
 		if err != nil {
@@ -104,9 +113,7 @@ func (c *Connection) Close() error {
 			c.Log.Println(err1)
 		}
 	}
-	if c.config.Diamond {
-		os.Remove("diamond.socket")
-	}
+	os.Remove("diamond.socket")
 	if c.conn != nil {
 		_, err := c.conn.Write([]byte(fmt.Sprintf("QUIT :%s\r\n", version)))
 		if err != nil {
