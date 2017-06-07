@@ -48,3 +48,10 @@ Plugins must be unique name and package import path
 Currently can't be unloaded
 
 Plugins can do unknown things
+
+Install new plugins by adding line to makefile:
+
+```CGO_ENABLED=1 go build -o skeleton.so -buildmode=plugin github.com/aerth/ircb-plugins/skeleton```
+
+And load a plugin (as master) with the command `$plugin skeleton.so`
+

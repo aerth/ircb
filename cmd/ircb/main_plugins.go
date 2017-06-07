@@ -1,4 +1,4 @@
-// +build go1.8,cgo
+// +build go1.8,plugins
 
 package main
 

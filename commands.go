@@ -394,6 +394,8 @@ func commandMasterUpgrade(c *Connection, irc *IRC) {
 	c.Log.Println(string(out))
 	if err != nil {
 		c.Log.Println(irc, err)
+		c.SendMaster("Could not checkout 'master' branch: %v", err)
+		c.SendMaster(string(out))
 		return
 	}
 	update := exec.Command("git", "pull", "origin", "master")
@@ -402,16 +404,21 @@ func commandMasterUpgrade(c *Connection, irc *IRC) {
 	c.Log.Println(string(out))
 	if err != nil {
 		c.Log.Println(irc, err)
+		c.SendMaster("Could not pull 'master' branch: %v", err)
+		c.SendMaster(string(out))
 		return
 	}
-	upgrade := exec.Command("make")
+	upgrade := exec.Command("make", "all")
 
 	out, err = upgrade.CombinedOutput()
 	c.Log.Println(string(out))
 	if err != nil {
 		c.Log.Println(irc, err)
+		c.SendMaster("Could not rebuild: %v", err)
+		c.SendMaster(string(out))
 		return
 	}
+	c.SendMaster("respawning now")
 	c.Respawn()
 
 }
@@ -419,10 +426,12 @@ func commandMasterMacro(c *Connection, irc *IRC) {}
 func masterCommandLoadPlugin(c *Connection, irc *IRC) {
 	if len(irc.Arguments) != 1 {
 		irc.Reply(c, "need plugin name")
+		return
 	}
-	err := c.LoadPlugin(irc.Arguments[0])
+	err := LoadPlugin(c, irc.Arguments[0])
 	if err != nil {
 		c.SendMaster("error loading plugin: %v", err)
+		return
 	}
 	irc.Reply(c, "plugin loaded: "+irc.Arguments[0])
 }

@@ -16,35 +16,20 @@ import (
 	"github.com/boltdb/bolt"
 )
 
-var version = "ircb v0.0.8"
-var ErrNoPluginSupport = fmt.Errorf("no plugin support")
-var ErrNoPlugin = fmt.Errorf("no plugin found")
-var ErrPluginInv = fmt.Errorf("invalid plugin")
-
-// PluginInitFunc for plugins
-type PluginInitFunc (func(c *Connection) error)
-
-// LoadPlugin loads the named plugin file
-var LoadPlugin = func(c *Connection, s string) error {
-	return ErrNoPluginSupport
-}
-
-func (c *Connection) LoadPlugin(name string) error {
-	return LoadPlugin(c, name)
-}
+var version = "ircb v0.0.9"
 
 type Connection struct {
 	Log        *log.Logger
-	HttpClient *http.Client
-	config     *Config
-	boltdb     *bolt.DB
+	HttpClient *http.Client       // customize user agent, proxy, tls, redirects, etc
+	CommandMap map[string]Command // map of command names to Command functions
+	MasterMap  map[string]Command // map of master command names to Command functions
+	config     *Config            // current config
+	boltdb     *bolt.DB           // opened database
 	conn       io.ReadWriteCloser
 	since      time.Time // since connected to server
 	masterauth time.Time // auth and auth timeout
 	reader     *bufio.Reader
-	CommandMap map[string]Command
-	MasterMap  map[string]Command
-	maplock    sync.Mutex
+	maplock    sync.Mutex // guards (both) command map writes
 	connected  bool
 	joined     bool
 	quiet      bool
@@ -56,12 +41,17 @@ func (config *Config) NewConnection() *Connection {
 	}
 	c := new(Connection)
 	c.config = config
-	c.Log = log.New(os.Stderr, "", log.Lshortfile)
 	c.since = time.Now()
-	// for now, using default client.
+
+	// TODO: custom client for user agent, proxy support
 	c.HttpClient = http.DefaultClient
 	c.CommandMap = DefaultCommandMap()
 	c.MasterMap = DefaultMasterMap()
+	if config.Verbose {
+		c.Log = log.New(os.Stderr, "", log.Lshortfile)
+	} else {
+		c.Log = log.New(os.Stderr, "", log.Ltime)
+	}
 	return c
 }
 func (c *Connection) Connect() (err error) {
@@ -197,12 +187,24 @@ func (c *Connection) SendMaster(format string, i ...interface{}) {
 func (c *Connection) Send(irc IRC) {
 	e := irc.Encode()
 	c.Log.Printf(">%q", string(e))
-	if len(e) > 512 {
-		c.Log.Println("length: %v", len(e))
+	if len(e) < 512 {
+		_, err := c.Write(e)
+		if err != nil {
+			c.Log.Println(err)
+		}
+		return
 	}
-	_, err := c.Write(e)
-	if err != nil {
-		c.Log.Println(err)
+	var line string
+	for i, r := range []rune(irc.Message) {
+		line = line + string(r)
+		if i > 0 && (i+1)%500 == 0 {
+			msg := IRC{
+				To:      irc.To,
+				Message: line,
+			}
+			c.Write(msg.Encode())
+			line = ""
+		}
 	}
 }
 
