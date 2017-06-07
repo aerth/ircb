@@ -367,7 +367,7 @@ func (c *Connection) readerwriter() error {
 				}
 				c.joined = true
 				c.Log.Println("Starting normal operation")
-
+				c.SendMaster("hello, master")
 			}
 
 		case "PRIVMSG":
