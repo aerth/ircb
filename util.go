@@ -2,7 +2,23 @@ package ircb
 
 import (
 	"fmt"
+
+	"github.com/aerth/spawn"
 )
+
+const (
+	Green     = "\x033"
+	Red       = "\x035"
+	Purple    = "\x036"
+	Yellow    = "\x038"
+	GreenBold = "\x039"
+)
+
+// Respawn closes connections after executing self, can be called at any time.
+func (c *Connection) Respawn() {
+	spawn.Spawn()
+	c.Close()
+}
 
 // ErrNoPluginSupport when compiled with no CGO or without 'plugins' tag
 var ErrNoPluginSupport = fmt.Errorf("no plugin support")

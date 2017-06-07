@@ -71,11 +71,10 @@ func (c *Connection) RemoveCommand(name string) {
 func DefaultCommandMap() map[string]Command {
 	m := make(map[string]Command)
 	m["quiet"] = commandQuiet
+	m["stop"] = commandQuiet
 	m["up"] = commandUptime
-	m["uptime"] = commandHostUptime
 	m["help"] = commandHelp
 	m["about"] = commandAbout
-	m["echo"] = commandEcho
 	m["karma"] = commandKarma
 	m["define"] = commandDefine
 	return m
@@ -88,6 +87,7 @@ func DefaultMasterMap() map[string]Command {
 	m["upgrade"] = commandMasterUpgrade
 	m["r"] = commandMasterReboot
 	m["part"] = commandMasterPart
+	m["echo"] = commandEcho
 	m["quit"] = commandMasterQuit
 	m["q"] = commandMasterQuit
 	m["quit"] = commandMasterQuit
@@ -307,9 +307,6 @@ func masterCommandLoadPlugin(c *Connection, irc *IRC) {
 		return
 	}
 	name := strings.TrimSpace(irc.Arguments[0])
-	if !strings.HasSuffix(name, ".so") {
-		name += ".so"
-	}
 	err := LoadPlugin(c, name)
 	if err != nil {
 		c.SendMaster("error loading plugin: %v", err)
@@ -321,7 +318,7 @@ func masterCommandLoadPlugin(c *Connection, irc *IRC) {
 func masterCommandFetchPlugin(c *Connection, irc *IRC) {
 	os.Setenv("CGO_ENABLED", "1")
 	if irc.Arguments == nil || len(irc.Arguments) != 1 {
-		irc.Reply(c, red+"need plugin name")
+		irc.Reply(c, Red+"need plugin name")
 		return
 	}
 	name := irc.Arguments[0]
@@ -334,26 +331,26 @@ func masterCommandFetchPlugin(c *Connection, irc *IRC) {
 	out, err := fetch.CombinedOutput()
 	if err != nil {
 		c.Log.Printf("error while fetching plugin %q: %v", name, err)
-		c.SendMaster(red+"error: %s %v", string(out), err)
+		c.SendMaster(Red+"error: %s %v", string(out), err)
 		return
 	}
 	irc.Reply(c, "compiling plugin")
 	build := exec.Command("go", "build",
-		"-o", name, "-v", "-buildmode=plugin",
+		"-o", name+".so", "-v", "-buildmode=plugin",
 		"github.com/aerth/ircb-plugins/"+name)
 	out, err = build.CombinedOutput()
 	if err != nil {
 		c.Log.Printf("error while fetching plugin %q: %v", name, err)
-		c.SendMaster(red+"error: %s %v", string(out), err)
+		c.SendMaster(Red+"error: %s %v", string(out), err)
 		return
 	}
 	err = LoadPlugin(c, name)
 	if err != nil {
 		c.Log.Printf("error while loading plugin %q: %v", name, err)
-		c.SendMaster(red+"error loading: %v", err)
+		c.SendMaster(Red+"error loading: %v", err)
 		return
 	}
 
-	irc.Reply(c, fmt.Sprintf(green+"plugin loaded: %q", name))
+	irc.Reply(c, fmt.Sprintf(Green+"plugin loaded: %q", name))
 
 }

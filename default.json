@@ -1,9 +1,9 @@
 {
   "Host": "chat.freenode.net:6697",
   "Nick": "mustangsally___",
-  "Master": "root:$",
+  "Master": "aerth:$",
   "CommandPrefix": "!",
-  "Channels": "##ircb",
+  "Channels": "",
   "UseSSL": true,
   "InvalidSSL": false,
   "ParseLinks": true

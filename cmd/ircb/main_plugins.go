@@ -25,6 +25,10 @@ func loadPlugin(c *ircb.Connection, name string) error {
 
 		return err
 	}
+	if !strings.HasSuffix(name, ".so") {
+		name += ".so"
+	}
+
 	p, err := plugin.Open(name)
 	if err != nil {
 		return err
