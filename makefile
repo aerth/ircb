@@ -4,7 +4,6 @@ IRCB=${GOPATH}/src/github.com/aerth/ircb
 rebuild:
 	@echo building irc client
 	CGO_ENABLED=1 go get -v -d github.com/aerth/ircb/cmd/ircb
-	CGO_ENABLED=1 go install -v .
 	CGO_ENABLED=1 go build -tags plugins -v -o ircb github.com/aerth/ircb/cmd/ircb
 	@echo built: ./ircb
 	@test -f config.json || ( cp -nv ${IRCB}/default.json config.json && echo "new default config" )
