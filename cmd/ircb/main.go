@@ -103,5 +103,8 @@ func catchSignals(c *ircb.Connection) {
 	// Block until a signal is received.
 	s := <-ch
 	c.Log.Println("Got signal:", s)
-	c.Diamond.Runlevel(0)
+	if c.Diamond != nil {
+		c.Diamond.Runlevel(0)
+	}
+	os.Exit(111)
 }
