@@ -3,9 +3,9 @@ package ircb
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -38,31 +38,6 @@ func nilcommand(c *Connection, irc *IRC) {
 	c.Log.Println("nil command ran successfully")
 }
 
-func verbIntHandler(c *Connection, irc *IRC) bool {
-	verb, _ := strconv.Atoi(irc.Verb)
-	switch verb {
-	default: // unknown numerical verb
-		c.Log.Printf("%s %q", irc.Verb, irc.Message)
-		return handled
-	case 331:
-		c.Log.Printf("%s TOPIC: %q", irc.Raw, "")
-		return handled
-	case 353:
-		c.Log.Printf("%s USER LIST: %q", irc.Raw, "")
-		return handled
-	case 372, 1, 2, 3, 4, 5, 6, 7, 0, 366:
-		return handled
-	case 221:
-		c.Log.Printf("UMODE: %q", irc.Message)
-		return handled
-	case 433:
-
-		c.Close()
-		return handled
-	}
-
-}
-
 // AddMasterCommand adds a new master command, named 'name' to the MasterMap
 func (c *Connection) AddMasterCommand(name string, fn Command) {
 	c.maplock.Lock()
@@ -92,118 +67,7 @@ func (c *Connection) RemoveCommand(name string) {
 	delete(c.CommandMap, name)
 }
 
-func privmsgMasterHandler(c *Connection, irc *IRC) bool {
-	if irc.ReplyTo != strings.Split(c.config.Master, ":")[0] {
-		c.Log.Printf("not master: %s", irc.ReplyTo)
-		return nothandled
-	}
-
-	if dur := time.Now().Sub(c.masterauth); dur > 5*time.Minute {
-		c.Log.Println("need reauth after", dur)
-		c.MasterCheck()
-		return nothandled
-	}
-	c.Log.Println("got master message, parsing...")
-	i := strings.Index(c.config.Master, ":")
-
-	if i == -1 {
-		c.Log.Println("bad config, not semicolon in Master field")
-		return nothandled
-	}
-	if i >= len(c.config.Master) {
-		c.Log.Println("bad config, bad semicolon in Master field")
-		return nothandled
-	}
-	mp := c.config.Master[i+1:]
-	if !strings.HasPrefix(irc.Message, mp) {
-
-		// switch prefix
-		if irc.Command == c.config.CommandPrefix && len(irc.Arguments) == 1 {
-			c.config.CommandPrefix = irc.Arguments[0]
-			c.Log.Printf("**New command prefix: %q", c.config.CommandPrefix)
-			c.SendMaster("**New command prefix: %q", c.config.CommandPrefix)
-			return handled
-		}
-		if c.config.Verbose {
-			c.Log.Println("not master command prefixed")
-		}
-		return nothandled
-	}
-	irc.Message = strings.TrimPrefix(irc.Message, mp)
-
-	irc.Command = strings.TrimSpace(strings.Split(irc.Message, " ")[0])
-	args := strings.Split(strings.TrimPrefix(irc.Message, irc.Command), " ")
-	for _, v := range args {
-		if strings.TrimSpace(v) == "" {
-			continue
-		}
-		irc.Arguments = append(irc.Arguments, v)
-	}
-	c.Log.Printf("master command request: %s, %v args)", irc.Command, len(irc.Arguments))
-	if c.config.Verbose {
-		c.Log.Printf("master command request: %s", irc)
-	}
-	if irc.Command != "" {
-		c.Log.Println("trying master command:", irc.Command)
-		if fn, ok := c.MasterMap[irc.Command]; ok {
-			c.Log.Printf("master command found: %q", irc.Command)
-			fn(c, irc)
-			return handled
-		}
-	}
-	c.Log.Printf("master command not found: %q", irc.Command)
-	return nothandled
-
-}
-
-func (c *Connection) GetPublicCommand(word string) Command {
-	fn, ok := c.CommandMap[word]
-	if !ok {
-		return nilcommand
-	}
-	return fn
-}
-
-func (c *Connection) IsPublicCommand(word string) bool {
-	_, ok := c.CommandMap[word]
-	return ok
-}
-func privmsgHandler(c *Connection, irc *IRC) {
-
-	// is karma
-	if strings.HasPrefix(irc.To, "#") && c.parseKarma(irc.Message) {
-		return
-
-	}
-
-	if irc.Command != "" {
-		if fn, ok := c.CommandMap[irc.Command]; ok {
-			c.Log.Printf("command found: %q", irc.Command)
-			fn(c, irc)
-			return
-		}
-	}
-
-	// handle channel defined definitions
-	if irc.Command != "" && len(irc.Arguments) == 0 {
-		definition := c.getDefinition(irc.Command)
-		if definition != "" {
-			irc.Reply(c, definition)
-			return
-		}
-
-	}
-
-	if irc.Command != "" {
-		c.Log.Printf("command not found: %q", irc.Command)
-	}
-	// try to parse http link title
-	if c.config.ParseLinks && strings.Contains(irc.Message, "http") {
-		go c.HandleLinks(irc)
-	}
-
-}
-
+// DefaultCommandMap returns default command map
 func DefaultCommandMap() map[string]Command {
 	m := make(map[string]Command)
 	m["quiet"] = commandQuiet
@@ -217,6 +81,7 @@ func DefaultCommandMap() map[string]Command {
 	return m
 }
 
+// DefaultMasterMap returns default master command map
 func DefaultMasterMap() map[string]Command {
 	m := make(map[string]Command)
 	m["do"] = commandMasterDo
@@ -357,13 +222,6 @@ func commandMasterPart(c *Connection, irc *IRC) {
 func commandMasterDebug(c *Connection, irc *IRC) {
 	c.Log.Println(c, irc)
 }
-func commandMasterReload(c *Connection, irc *IRC) {
-	err := LoadPlugin(c, "plugin.so")
-	if err != nil {
-		c.SendMaster("%v", err)
-	}
-	c.SendMaster("plugins reloaded")
-}
 func commandMasterSet(c *Connection, irc *IRC) {
 	if len(irc.Arguments) != 2 {
 		irc.Reply(c, `usage: set optionname on|off`)
@@ -448,7 +306,11 @@ func masterCommandLoadPlugin(c *Connection, irc *IRC) {
 		irc.Reply(c, "need plugin name")
 		return
 	}
-	err := LoadPlugin(c, irc.Arguments[0])
+	name := strings.TrimSpace(irc.Arguments[0])
+	if !strings.HasSuffix(name, ".so") {
+		name += ".so"
+	}
+	err := LoadPlugin(c, name)
 	if err != nil {
 		c.SendMaster("error loading plugin: %v", err)
 		return
@@ -457,6 +319,7 @@ func masterCommandLoadPlugin(c *Connection, irc *IRC) {
 }
 
 func masterCommandFetchPlugin(c *Connection, irc *IRC) {
+	os.Setenv("CGO_ENABLED", "1")
 	if irc.Arguments == nil || len(irc.Arguments) != 1 {
 		irc.Reply(c, red+"need plugin name")
 		return
@@ -466,19 +329,27 @@ func masterCommandFetchPlugin(c *Connection, irc *IRC) {
 		return
 	}
 
-	fetch := exec.Command("go", "build",
-		"-o", name, "-v", "-buildmode=plugin",
-		"github.com/aerth/ircb-plugins/"+name)
-
+	irc.Reply(c, "fetching plugin")
+	fetch := exec.Command("go", "get", "-v", "-u", "-d", "github.com/aerth/ircb-plugins/...")
 	out, err := fetch.CombinedOutput()
 	if err != nil {
-		c.Log.Println("error while fetching plugin %q: %v", name, err)
+		c.Log.Printf("error while fetching plugin %q: %v", name, err)
+		c.SendMaster(red+"error: %s %v", string(out), err)
+		return
+	}
+	irc.Reply(c, "compiling plugin")
+	build := exec.Command("go", "build",
+		"-o", name, "-v", "-buildmode=plugin",
+		"github.com/aerth/ircb-plugins/"+name)
+	out, err = build.CombinedOutput()
+	if err != nil {
+		c.Log.Printf("error while fetching plugin %q: %v", name, err)
 		c.SendMaster(red+"error: %s %v", string(out), err)
 		return
 	}
 	err = LoadPlugin(c, name)
 	if err != nil {
-		c.Log.Println("error while loading plugin %q: %v", name, err)
+		c.Log.Printf("error while loading plugin %q: %v", name, err)
 		c.SendMaster(red+"error loading: %v", err)
 		return
 	}
