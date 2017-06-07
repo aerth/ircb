@@ -85,7 +85,7 @@ func TestParse(t *testing.T) {
 	testcases = []struct {
 		expected, input string
 	}{
-		{"Nickname is already in use", ":host.test 433 * mustangsally :Nickname is already in use\r\n"},
+		{"mustangsally :Nickname is already in use", ":host.test 433 * mustangsally :Nickname is already in use\r\n"},
 		{"You need to register before you can use that command", ":oragono.test 451 * :You need to register before you can use that command\r\n"},
 		{"mustangsally", "PING mustangsally\r\n"},
 		{"hello", "mustangsally!ok@ok PRIVMSG #ok :hello"},
