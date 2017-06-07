@@ -205,6 +205,7 @@ func (c *Connection) Send(irc IRC) {
 				Message: v,
 			}
 			c.Send(line)
+			<-time.After(time.Second)
 
 		}
 
