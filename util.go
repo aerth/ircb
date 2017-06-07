@@ -2,6 +2,7 @@ package ircb
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/aerth/spawn"
 )
@@ -36,4 +37,8 @@ type PluginInitFunc (func(c *Connection) error)
 // This is a stub, and should be replaced if ircb is built with plugin support
 var LoadPlugin = func(c *Connection, s string) error {
 	return ErrNoPluginSupport
+}
+
+func openlogfile() (f *os.File, err error) {
+	return os.OpenFile(".log.txt", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
 }
