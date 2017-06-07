@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os/exec"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -216,8 +217,10 @@ func DefaultMasterMap() map[string]Command {
 	m["quit"] = commandMasterQuit
 	m["q"] = commandMasterQuit
 	m["quit"] = commandMasterQuit
+	m["help"] = commandMasterHelp
 	m["set"] = commandMasterSet
 	m["plugin"] = masterCommandLoadPlugin
+	m["fetch"] = masterCommandFetchPlugin
 	return m
 }
 
@@ -250,13 +253,26 @@ func commandQuiet(c *Connection, irc *IRC) {
 	}
 	c.Log.Println("muted")
 }
+func commandMasterHelp(c *Connection, irc *IRC) {
+	if len(irc.Arguments) < 2 || irc.Arguments[0] == "" {
+		var list []string
+		for i := range c.MasterMap {
+			list = append(list, i)
+		}
+		sort.Strings(list)
+		irc.Reply(c, fmt.Sprintf("%v master commands: %s", len(list), list))
+		return
+	}
+
+}
 func commandHelp(c *Connection, irc *IRC) {
 	if len(irc.Arguments) < 2 || irc.Arguments[0] == "" {
-		var commandlist string
+		var list []string
 		for i := range c.CommandMap {
-			commandlist += i + " "
+			list = append(list, i)
 		}
-		irc.Reply(c, "commands: "+commandlist)
+		sort.Strings(list)
+		irc.Reply(c, fmt.Sprintf("%v commands: %s", len(list), list))
 		return
 	}
 }
@@ -284,8 +300,6 @@ func commandDefine(c *Connection, irc *IRC) {
 	irc.Reply(c, fmt.Sprintf("defined: %q", action))
 
 }
-func commandLine(c *Connection, irc *IRC)          {}
-func commandHistorySearch(c *Connection, irc *IRC) {}
 func commandMasterDo(c *Connection, irc *IRC) {
 	c.Log.Println("GOT DO:", irc)
 	c.Write([]byte(strings.Join(irc.Arguments, " ")))
@@ -385,9 +399,7 @@ func commandMasterSet(c *Connection, irc *IRC) {
 		}
 
 	}
-
 }
-
 func commandMasterUpgrade(c *Connection, irc *IRC) {
 	checkout := exec.Command("git", "checkout", "master")
 	out, err := checkout.CombinedOutput()
@@ -422,7 +434,6 @@ func commandMasterUpgrade(c *Connection, irc *IRC) {
 	c.Respawn()
 
 }
-func commandMasterMacro(c *Connection, irc *IRC) {}
 func masterCommandLoadPlugin(c *Connection, irc *IRC) {
 	if len(irc.Arguments) != 1 {
 		irc.Reply(c, "need plugin name")
@@ -434,4 +445,35 @@ func masterCommandLoadPlugin(c *Connection, irc *IRC) {
 		return
 	}
 	irc.Reply(c, "plugin loaded: "+irc.Arguments[0])
+}
+
+func masterCommandFetchPlugin(c *Connection, irc *IRC) {
+	if irc.Arguments == nil || len(irc.Arguments) != 1 {
+		irc.Reply(c, "need plugin name")
+		return
+	}
+	name := irc.Arguments[0]
+	if strings.TrimSpace(name) == "" || strings.Contains(name, "..") {
+		return
+	}
+
+	fetch := exec.Command("go", "build",
+		"-o", name, "-v", "-buildmode=plugin",
+		"github.com/aerth/ircb-plugins/"+name)
+
+	out, err := fetch.CombinedOutput()
+	if err != nil {
+		c.Log.Println("error while fetching plugin %q: %v", name, err)
+		c.SendMaster("error: %s %v", string(out), err)
+		return
+	}
+	err = LoadPlugin(c, name)
+	if err != nil {
+		c.Log.Println("error while loading plugin %q: %v", name, err)
+		c.SendMaster("error loading: %v", err)
+		return
+	}
+
+	irc.Reply(c, fmt.Sprintf("plugin loaded: %q", name))
+
 }
