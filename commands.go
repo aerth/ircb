@@ -131,9 +131,18 @@ func privmsgMasterHandler(c *Connection, irc *IRC) bool {
 	}
 	irc.Message = strings.TrimPrefix(irc.Message, mp)
 
-	irc.Command = strings.Split(irc.Message, " ")[0]
-	irc.Arguments = strings.Split(strings.TrimPrefix(irc.Message, irc.Command+" "), " ")
-	c.Log.Printf("master command request: %s %s", irc.Command, irc.Arguments)
+	irc.Command = strings.TrimSpace(strings.Split(irc.Message, " ")[0])
+	args := strings.Split(strings.TrimPrefix(irc.Message, irc.Command), " ")
+	for _, v := range args {
+		if strings.TrimSpace(v) == "" {
+			continue
+		}
+		irc.Arguments = append(irc.Arguments, v)
+	}
+	c.Log.Printf("master command request: %s, %v args)", irc.Command, len(irc.Arguments))
+	if c.config.Verbose {
+		c.Log.Printf("master command request: %s", irc)
+	}
 	if irc.Command != "" {
 		c.Log.Println("trying master command:", irc.Command)
 		if fn, ok := c.MasterMap[irc.Command]; ok {
