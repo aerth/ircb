@@ -2,6 +2,7 @@ package ircb
 
 import (
 	"bufio"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"log"
@@ -61,6 +62,13 @@ func (config *Config) NewConnection() *Connection {
 		c.Log = log.New(os.Stderr, "", log.Ltime)
 	}
 	return c
+}
+
+func (cfg *Config) dialtls() (*tls.Conn, error) {
+
+	return tls.Dial("tcp", cfg.Host, &tls.Config{
+		InsecureSkipVerify: cfg.InvalidSSL,
+	})
 }
 
 // Connect dials the host
