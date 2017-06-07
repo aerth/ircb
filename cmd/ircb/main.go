@@ -6,7 +6,9 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	"github.com/aerth/ircb"
 )
@@ -58,6 +60,8 @@ LoadConfig:
 		log.Fatal(err)
 	}
 
+	go catchSignals(conn)
+
 	err = conn.Connect()
 	if err != nil {
 		if strings.Contains(err.Error(), "delete if you want") {
@@ -91,4 +95,13 @@ func buildconfig() *ircb.Config {
 	}
 
 	return config
+}
+
+func catchSignals(c *ircb.Connection) {
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, os.Interrupt, syscall.SIGQUIT, syscall.SIGHUP)
+	// Block until a signal is received.
+	s := <-ch
+	c.Log.Println("Got signal:", s)
+	c.Diamond.Runlevel(0)
 }
