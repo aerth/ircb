@@ -192,6 +192,24 @@ func (c *Connection) SendMaster(format string, i ...interface{}) {
 
 // Send IRC message (uses To and Message fields)
 func (c *Connection) Send(irc IRC) {
+	irc.Message = strings.TrimSuffix(irc.Message, "\n")
+	if strings.Contains(irc.Message, "\n") {
+		messages := strings.Split(irc.Message, "\n")
+		for _, v := range messages {
+			if strings.TrimSpace(v) == "" {
+				continue
+			}
+
+			line := IRC{
+				To:      irc.To,
+				Message: v,
+			}
+			c.Send(line)
+
+		}
+
+		return
+	}
 	e := irc.Encode()
 	c.Log.Printf(">%q", string(e))
 	if len(e) < 512 {
@@ -202,6 +220,7 @@ func (c *Connection) Send(irc IRC) {
 		return
 	}
 	var line string
+
 	for i, r := range []rune(irc.Message) {
 		line = line + string(r)
 		if i > 0 && (i+1)%500 == 0 {

@@ -449,7 +449,7 @@ func masterCommandLoadPlugin(c *Connection, irc *IRC) {
 
 func masterCommandFetchPlugin(c *Connection, irc *IRC) {
 	if irc.Arguments == nil || len(irc.Arguments) != 1 {
-		irc.Reply(c, "need plugin name")
+		irc.Reply(c, red+"need plugin name")
 		return
 	}
 	name := irc.Arguments[0]
@@ -464,16 +464,16 @@ func masterCommandFetchPlugin(c *Connection, irc *IRC) {
 	out, err := fetch.CombinedOutput()
 	if err != nil {
 		c.Log.Println("error while fetching plugin %q: %v", name, err)
-		c.SendMaster("error: %s %v", string(out), err)
+		c.SendMaster(red+"error: %s %v", string(out), err)
 		return
 	}
 	err = LoadPlugin(c, name)
 	if err != nil {
 		c.Log.Println("error while loading plugin %q: %v", name, err)
-		c.SendMaster("error loading: %v", err)
+		c.SendMaster(red+"error loading: %v", err)
 		return
 	}
 
-	irc.Reply(c, fmt.Sprintf("plugin loaded: %q", name))
+	irc.Reply(c, fmt.Sprintf(green+"plugin loaded: %q", name))
 
 }
