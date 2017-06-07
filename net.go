@@ -119,7 +119,9 @@ func (c *Connection) Close() error {
 		if err != nil {
 			c.Log.Println(err)
 		}
-		return c.conn.Close()
+		if c != nil && c.conn != nil {
+			return c.conn.Close()
+		}
 	}
 	return nil
 }

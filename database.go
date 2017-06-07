@@ -61,7 +61,7 @@ func (c *Connection) getDefinition(word string) (definition string) {
 	val := bucket.Get([]byte(word))
 	return string(val)
 }
-func (c *Connection) DatabaseDefine(word, definition string) error {
+func (c *Connection) databaseDefine(word, definition string) error {
 	tx, err := c.boltdb.Begin(true)
 	if err != nil {
 		return err
@@ -79,7 +79,7 @@ func (c *Connection) DatabaseDefine(word, definition string) error {
 	return tx.Commit()
 
 }
-func (c *Connection) KarmaDown(name string) error {
+func (c *Connection) karmaDown(name string) error {
 	err := c.boltdb.Update(func(tx *bolt.Tx) error {
 		defer tx.Rollback()
 		bucket := tx.Bucket(dbkarma)
@@ -93,7 +93,7 @@ func (c *Connection) KarmaDown(name string) error {
 	return err
 }
 
-func (c *Connection) KarmaUp(name string) error {
+func (c *Connection) karmaUp(name string) error {
 	err := c.boltdb.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(dbkarma)
 		current := bytes2int(bucket.Get([]byte(name)))
@@ -109,7 +109,8 @@ func (c *Connection) KarmaUp(name string) error {
 	//	return err
 	return nil
 }
-func (c *Connection) KarmaShow(name string) string {
+
+func (c *Connection) karmaShow(name string) string {
 	var current string
 	err := c.boltdb.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(dbkarma)
@@ -126,7 +127,7 @@ func (c *Connection) KarmaShow(name string) string {
 	return current
 }
 
-// Converts bytes to an integer
+// Converts bytes to an int
 func bytes2int(b []byte) int {
 	if b == nil || len(b) == 0 {
 		return 0
@@ -134,6 +135,7 @@ func bytes2int(b []byte) int {
 	return int(binary.BigEndian.Uint64(b))
 }
 
+// Converts int to bytes
 func int2bytes(u int) []byte {
 	buf := make([]byte, 8)
 	binary.BigEndian.PutUint64(buf, uint64(u))

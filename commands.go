@@ -170,7 +170,7 @@ func commandDefine(c *Connection, irc *IRC) {
 	}
 	definition := strings.Join(irc.Arguments[1:], " ")
 
-	c.DatabaseDefine(action, definition)
+	c.databaseDefine(action, definition)
 	irc.Reply(c, fmt.Sprintf("defined: %q", action))
 
 }
