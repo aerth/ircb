@@ -1,6 +1,8 @@
 export CGO_ENABLED=1
 GOPATH:=${shell go env GOPATH}
 IRCB=${GOPATH}/src/github.com/aerth/ircb
+define GetPlugins:
+endef
 rebuild:
 	@echo building irc client
 	CGO_ENABLED=1 go get -v -d github.com/aerth/ircb/cmd/ircb
@@ -12,8 +14,8 @@ all: rebuild plugins
 
 plugins:
 	## plugins go here
-	CGO_ENABLED=1 go build -o skeleton.so -buildmode=plugin github.com/aerth/ircb-plugins/skeleton
-	## add more plugins here
+	CGO_ENABLED=1 go get -v -d github.com/aerth/ircb-plugins/...
+	@echo $(foreach plugin,${shell go list github.com/aerth/ircb-plugins/...}, go build -o ${shell basename $(plugin)} -buildmode=plugin $(plugin);)
 
 run:
 	test -x ./ircb || ${MAKE} rebuild
