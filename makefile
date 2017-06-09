@@ -15,7 +15,7 @@ all: rebuild plugins
 plugins:
 	## plugins go here
 	CGO_ENABLED=1 go get -v -d github.com/aerth/ircb-plugins/...
-	@echo $(foreach plugin,${shell go list github.com/aerth/ircb-plugins/...}, go build -o ${shell basename $(plugin)} -buildmode=plugin $(plugin);)
+	@echo $(foreach plugin,${shell go list github.com/aerth/ircb-plugins/...}, go build -o ${shell basename $(plugin)}.so -buildmode=plugin $(plugin);)
 
 run:
 	test -x ./ircb || ${MAKE} rebuild
