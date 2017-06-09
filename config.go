@@ -17,10 +17,10 @@ type Config struct {
 	Define        bool
 	Verbose       bool
 	Karma         bool
-	History       bool
-	Diamond       bool   // socket for console control (experimental)
+	Diamond       bool   // use diamond system
+	DiamondSocket string // path to socket
 	Database      string // path to boltdb (can be empty to use bolt.db)
-	AuthMode      int    // 0 ACC (freenode), 1 STATUS, -1 none
+	AuthMode      int    // 0 ACC (freenode, recommended), 1 STATUS, -1 none
 }
 
 // NewDefaultConfig returns the default config, minimal changes would be Host,Nick,Master for typical usage.
@@ -30,11 +30,10 @@ func NewDefaultConfig() *Config {
 	config.Nick = "mustangsally"
 	config.Master = "aerth:$"
 	config.CommandPrefix = "!"
-	config.Channels = "##ircb,##ircb"
+	config.Channels = "##ircb,##go-nuts"
 	config.UseSSL = true
 	config.InvalidSSL = false
 	config.Karma = true
-	config.History = true
 	config.ParseLinks = false
 	config.Define = true
 	return config

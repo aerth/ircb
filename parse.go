@@ -5,6 +5,12 @@ import (
 	"strings"
 )
 
+// to compare auth replies
+const formatauth = "" +
+	"NickServ!NickServ@services. NOTICE %s :%s ACC 3" // botname mastername
+
+const formatauth2 = "STATUS %s 1 " // mastername
+
 // IRC is a parsed message received from IRC server
 type IRC struct {
 	Raw       string   // As received
@@ -14,13 +20,19 @@ type IRC struct {
 	Channel   string   // From channel (can be user)
 	IsCommand bool     // Is a public command
 	IsWhisper bool     // Is not from channel
-	Message   string   // Parsed message (would still include command prefix)
-	Command   string   // Parsed command (stripped of command prefix, first word)
+	Message   string   // Parsed message (can still include command prefix)
+	Command   string   // Parsed command (stripped of command prefix)
 	Arguments []string // Parsed arguments (can be nil)
 
 }
 
 // Encode prepares an IRC message to be sent to server
+// Uses only the To and Message fields, so it is easy to write an IRC such as:
+//
+//  irc := IRC{To: "##ircb", Message: "hello"}
+//  c.Send(irc)
+//  c.Send(IRC{To:"username", Message:"hello"})
+//
 func (irc IRC) Encode() []byte {
 	return []byte(fmt.Sprintf("PRIVMSG %s :%s\r\n", irc.To, irc.Message))
 }
@@ -113,7 +125,6 @@ func Parse(input string) *IRC {
 	return irc
 }
 
-
 // Parse a command in context of nickname, command prefix
 // Does not handle master command parsing
 func (cfg Config) Parse(input string) *IRC {
@@ -140,6 +151,3 @@ func (cfg Config) Parse(input string) *IRC {
 
 	return irc
 }
-
-const formatauth = "NickServ!NickServ@services. NOTICE %s :%s ACC 3" // botname mastername
-const formatauth2 = "STATUS %s 1 "                                   // mastername

@@ -70,31 +70,29 @@ func (c *Connection) RemoveCommand(name string) {
 // DefaultCommandMap returns default command map
 func DefaultCommandMap() map[string]Command {
 	m := make(map[string]Command)
-	m["quiet"] = commandQuiet
-	m["stop"] = commandQuiet
-	m["up"] = commandUptime
-	m["help"] = commandHelp
-	m["about"] = commandAbout
-	m["karma"] = commandKarma
-	m["define"] = commandDefine
+	m["quiet"] = commandQuiet   // quiet
+	m["up"] = commandUptime     // bot uptime
+	m["help"] = commandHelp     // list commands
+	m["about"] = commandAbout   // about link
+	m["karma"] = commandKarma   // karma system
+	m["define"] = commandDefine // define system
 	return m
 }
 
 // DefaultMasterMap returns default master command map
 func DefaultMasterMap() map[string]Command {
 	m := make(map[string]Command)
-	m["do"] = commandMasterDo
-	m["upgrade"] = commandMasterUpgrade
-	m["r"] = commandMasterReboot
-	m["part"] = commandMasterPart
-	m["echo"] = commandEcho
-	m["quit"] = commandMasterQuit
-	m["q"] = commandMasterQuit
-	m["quit"] = commandMasterQuit
-	m["help"] = commandMasterHelp
-	m["set"] = commandMasterSet
-	m["plugin"] = masterCommandLoadPlugin
-	m["fetch"] = masterCommandFetchPlugin
+	m["do"] = commandMasterDo             // do <raw irc>
+	m["upgrade"] = commandMasterUpgrade   // upgrade and redeploy
+	m["r"] = commandMasterReboot          // reboot
+	m["part"] = commandMasterPart         // part <channel>
+	m["echo"] = commandEcho               // echo back
+	m["quit"] = commandMasterQuit         // cant quit
+	m["q"] = commandMasterQuit            // cant quit
+	m["help"] = commandMasterHelp         // list master commands
+	m["set"] = commandMasterSet           // set (some) config options
+	m["plugin"] = masterCommandLoadPlugin // load a local .so
+	m["fetch"] = masterCommandFetchPlugin // fetch latest plugin from repo
 	return m
 }
 
@@ -351,6 +349,10 @@ func masterCommandFetchPlugin(c *Connection, irc *IRC) {
 }
 
 func commandKarma(c *Connection, irc *IRC) {
+	if !c.config.Karma {
+		irc.ReplyUser(c, "karma is disabled")
+		return
+	}
 	if len(irc.Arguments) != 1 {
 		irc.Reply(c, c.karmaShow(irc.ReplyTo))
 		return
@@ -358,33 +360,40 @@ func commandKarma(c *Connection, irc *IRC) {
 
 	irc.Reply(c, c.karmaShow(irc.Arguments[0]))
 }
-func (c *Connection) parseKarma(input string) (handled bool) {
-	handled = false
+func (c *Connection) parseKarma(input string) bool {
+	if !c.config.Karma {
+		return nothandled
+	}
 	split := strings.Split(input, " ")
 	if len(split) < 1 {
-		return false
+		return nothandled
 	}
 
+	// input is more than one word, try "thank" method
 	if len(split) > 1 {
 		if strings.Contains(input, "thank") {
 			if i := strings.Index(input, ":"); i != -1 && i != 0 {
 				c.Log.Println("Karma:", input[0:i])
 				c.karmaUp(input[0:i])
-				return true
+				return handled
 			}
-			return false
+			return nothandled
 		}
-		return false
+		return nothandled
 	}
 
+	// user+
 	if strings.HasSuffix(input, "+") {
 		c.karmaUp(strings.Replace(input, "+", "", -1))
-		return true
+		return handled
 	}
 
+	// user-
 	if strings.HasSuffix(input, "-") {
 		c.karmaDown(strings.Replace(input, "-", "", -1))
-		return true
+		return handled
 	}
-	return false
+
+	// no karma found
+	return nothandled
 }

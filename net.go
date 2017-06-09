@@ -29,7 +29,7 @@ type Connection struct {
 	HTTPClient *http.Client       // customize user agent, proxy, tls, redirects, etc
 	CommandMap map[string]Command // map of command names to Command functions
 	MasterMap  map[string]Command // map of master command names to Command functions
-	Diamond    *diamond.System    // can be nil
+	diamond    *diamond.System    // can be nil
 	config     *Config            // current config
 	boltdb     *bolt.DB           // opened database
 	conn       io.ReadWriteCloser
@@ -80,16 +80,19 @@ func (c *Connection) Connect() (err error) {
 			c.Close()
 		}(c)
 		if c.config.Diamond {
-			c.Diamond, err = diamond.New("diamond.socket")
+			if c.config.DiamondSocket == "" {
+				c.config.DiamondSocket = "control.socket"
+			}
+			c.ciamond, err = diamond.New(c.config.DiamondSocket)
 			if err != nil {
 				return err
 			}
-			c.Diamond.Config.Kickable = true
-			c.Diamond.SetRunlevel(0, func() error {
+			c.ciamond.Config.Kickable = true
+			c.ciamond.SetRunlevel(0, func() error {
 				return c.Close()
 			})
-			c.Diamond.SetRunlevel(1, func() error { return nil })
-			c.Diamond.Runlevel(1)
+			c.ciamond.SetRunlevel(1, func() error { return nil })
+			c.ciamond.Runlevel(1)
 		}
 		c.boltdb, err = loadDatabase(c.config.Database)
 		if err != nil {
@@ -117,6 +120,16 @@ func (c *Connection) Connect() (err error) {
 		return c.readerwriter()
 	}
 	return fmt.Errorf("already connected")
+}
+
+// Diamond returns ircb's diamond system, will be nil if not connected or not configured with 'Diamond: true'
+func (c *Connection) Diamond() *diamond.System {
+	return c.diamond
+}
+
+// Database returns ircb's database system, will be nil if not connected
+func (c *Connection) Database() *bolt.DB {
+	return c.boltdb
 }
 
 // Close all connections and databases, remove diamond.socket
