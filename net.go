@@ -97,8 +97,9 @@ func (c *Connection) Connect() (err error) {
 		}
 
 		// dial direct
+		c.Log.Println(version)
 		c.Log.Println("connecting...")
-
+		fmt.Printf("%s\n", c.MarshalConfig())
 		if c.config.UseSSL {
 			c.conn, err = c.config.dialtls()
 		} else {

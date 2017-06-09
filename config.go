@@ -41,8 +41,9 @@ func NewDefaultConfig() *Config {
 }
 
 // MarshalConfig encodes the connection's config as JSON
-func (c *Connection) MarshalConfig() ([]byte, error) {
-	return c.config.Marshal()
+func (c *Connection) MarshalConfig() []byte {
+	b, _ := c.config.Marshal()
+	return b
 }
 
 // Marshal into json encoded bytes from config values

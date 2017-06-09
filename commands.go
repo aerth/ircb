@@ -179,13 +179,8 @@ func commandMasterDo(c *Connection, irc *IRC) {
 	c.Write([]byte(strings.Join(irc.Arguments, " ")))
 }
 func commandMasterReboot(c *Connection, irc *IRC) {
-	b, err := c.MarshalConfig()
-	if err != nil {
-		c.Log.Printf("error while trying to reboot: %v", err)
-		irc.Reply(c, "cant reboot, check logs")
-		return
-	}
-	err = ioutil.WriteFile("config.json", b, 0600)
+	b := c.MarshalConfig()
+	err := ioutil.WriteFile("config.json", b, 0600)
 	if err != nil {
 		c.Log.Printf("error while trying to write config file for respawn: %v", err)
 		irc.Reply(c, "cant reboot, check logs")
