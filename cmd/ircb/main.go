@@ -18,16 +18,15 @@ func init() {
 }
 
 var (
-	flaghost           = flag.String("h", "localhost:6667", "host (in the format 'host:port')")
-	flagnick           = flag.String("n", "mustangsally", "nick")
-	flagmaster         = flag.String("m", "root:@", "master:commandprefix")
-	flagcommandprefix  = flag.String("c", "!", "public command prefix")
-	flagssl            = flag.Bool("ssl", false, "use ssl to connect")
-	flaginvalidssl     = flag.Bool("x", false, "accept invalid tls certificates")
-	flagdisablemacros  = flag.Bool("nodefine", false, "dont use definition system")
-	flagdisablehistory = flag.Bool("nohistory", false, "dont use history system")
-	flagdisablekarma   = flag.Bool("nokarma", false, "dont use karma system")
-	verbose            = flag.Bool("v", false, "lots of extra printing")
+	flaghost          = flag.String("h", "localhost:6667", "host (in the format 'host:port')")
+	flagnick          = flag.String("n", "mustangsally", "nick")
+	flagmaster        = flag.String("m", "root:@", "master:commandprefix")
+	flagcommandprefix = flag.String("c", "!", "public command prefix")
+	flagssl           = flag.Bool("ssl", false, "use ssl to connect")
+	flaginvalidssl    = flag.Bool("x", false, "accept invalid tls certificates")
+	flagdisablemacros = flag.Bool("nodefine", false, "dont use definition system")
+	flagdisablekarma  = flag.Bool("nokarma", false, "dont use karma system")
+	verbose           = flag.Bool("v", false, "lots of extra printing")
 )
 
 func main() {
@@ -81,7 +80,6 @@ func buildconfig() *ircb.Config {
 	config.InvalidSSL = *flaginvalidssl
 	config.CommandPrefix = "!"
 	config.Karma = (*flagdisablekarma == false)
-	config.History = (*flagdisablehistory == false)
 	config.Define = (*flagdisablemacros == false)
 
 	if master := os.Getenv("MASTER"); master != "" {
@@ -103,8 +101,8 @@ func catchSignals(c *ircb.Connection) {
 	// Block until a signal is received.
 	s := <-ch
 	c.Log.Println("Got signal:", s)
-	if c.Diamond != nil {
-		c.Diamond.Runlevel(0)
+	if d := c.Diamond(); d != nil {
+		d.Runlevel(0)
 	}
 	os.Exit(111)
 }

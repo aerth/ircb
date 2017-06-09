@@ -83,16 +83,16 @@ func (c *Connection) Connect() (err error) {
 			if c.config.DiamondSocket == "" {
 				c.config.DiamondSocket = "control.socket"
 			}
-			c.ciamond, err = diamond.New(c.config.DiamondSocket)
+			c.diamond, err = diamond.New(c.config.DiamondSocket)
 			if err != nil {
 				return err
 			}
-			c.ciamond.Config.Kickable = true
-			c.ciamond.SetRunlevel(0, func() error {
+			c.diamond.Config.Kickable = true
+			c.diamond.SetRunlevel(0, func() error {
 				return c.Close()
 			})
-			c.ciamond.SetRunlevel(1, func() error { return nil })
-			c.ciamond.Runlevel(1)
+			c.diamond.SetRunlevel(1, func() error { return nil })
+			c.diamond.Runlevel(1)
 		}
 		c.boltdb, err = loadDatabase(c.config.Database)
 		if err != nil {

@@ -224,7 +224,7 @@ func commandMasterSet(c *Connection, irc *IRC) {
 	value := irc.Arguments[1]
 	switch option {
 	default:
-		irc.Reply(c, `no option like that`)
+		irc.Reply(c, `no option like that, 'links' 'define' or 'karma'`)
 		return
 	case "links":
 		switch value {
@@ -247,12 +247,12 @@ func commandMasterSet(c *Connection, irc *IRC) {
 			return
 		}
 
-	case "history":
+	case "karma":
 		switch value {
 		case "on":
-			c.config.History = true
+			c.config.Karma = true
 		case "off":
-			c.config.History = false
+			c.config.Karma = false
 		default:
 			irc.Reply(c, `usage: set optionname on|off`)
 			return
