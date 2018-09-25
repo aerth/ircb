@@ -1,5 +1,7 @@
 # ircb
 
+** broken **
+
 [![Build Status](https://travis-ci.org/aerth/ircb.svg?branch=master)](https://travis-ci.org/aerth/ircb)
 
 
